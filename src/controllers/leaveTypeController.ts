@@ -1,18 +1,22 @@
 import { Request, Response } from "express";
-import LeaveAllowance from "../db/models/leaveAllowanceModel";
+import LeaveType from "../db/models/leaveTypeModel";
 
-const leaveAllowanceController = {
+const leaveTypeController = {
     getAll: async (req: Request, res: Response) => {
         try {
-          const alowance = await LeaveAllowance.findAll();
-          res.status(200).json(alowance);
+          const Type = await LeaveType.findAll();
+          res.status(200).json(Type);
         } catch (error) {
           // Menangani kesalahan jika terjadi
           console.error('Error while fetching users:', error);
           res.status(500).json({ error: 'Unable to fetch users' });
         }
     },
+
+    createLeaveType: async (req: Request, res: Response) => {
+        
+    }
     
 }
 
-export default leaveAllowanceController
+export default leaveTypeController

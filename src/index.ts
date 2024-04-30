@@ -6,6 +6,7 @@ import userRoutes from './routes/userRoutes';
 import submissionRoutes from './routes/leaveSubmissionsRoutes';
 import authRoutes from './routes/authRoutes';
 import allowanceRoutes from './routes/leaveAllowanceRoutes';
+import './jobs/updateLeaveAllowance';
 
 const app = express();
 

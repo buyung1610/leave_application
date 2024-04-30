@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import User from "../db/models/userModel";
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken'
+import LeaveAllowance from "../db/models/leaveAllowanceModel";
 
 const userController = {
   getAllUser: async (req: Request, res: Response) => {
@@ -19,7 +20,15 @@ const userController = {
   // Method untuk membuat pengguna baru
   createUser: async (req: Request, res: Response) => {
     try {
-      const { nama, email, password, position, department, telephone, join_date, gender, user_id } = req.body;
+      const { nama, email, password, position, department, telephone, join_date, gender } = req.body;
+      const token = req.headers.authorization?.split(' ')[1];
+
+      if (!token) {
+        return res.status(401).json({ error: 'No token provided' });
+      }
+
+      const decoded = jwt.verify(token, 'your_secret_key') as { userId: number };
+      const user_id = decoded.userId;
   
       // Mengecek apakah email sudah ada di dalam database
       const existingUser = await User.findOne({ where: { email: email } });
@@ -40,6 +49,35 @@ const userController = {
         telephone, 
         join_date,
         gender,
+        created_at: new Date(),
+        created_by: user_id
+      });
+
+      const joinDate = new Date(newUser.join_date);
+      const currentDate = new Date();
+      const diffYears = currentDate.getFullYear() - joinDate.getFullYear();
+      const diffMonths = diffYears * 12 + (currentDate.getMonth() - joinDate.getMonth());
+      
+      let leaveAllowance = 0;
+      if (diffMonths >= 72) {
+          leaveAllowance = 17;
+      } else if (diffMonths >= 60) {
+          leaveAllowance = 16;
+      } else if (diffMonths >= 48) {
+          leaveAllowance = 15;
+      } else if (diffMonths >= 36) {
+          leaveAllowance = 14;
+      } else if (diffMonths >= 24) {
+          leaveAllowance = 13;
+      } else if (diffMonths >= 12) {
+          leaveAllowance = 12;
+      } else {
+          leaveAllowance = 0;
+      }
+      // Membuat data jatah cuti untuk pengguna baru
+      const newLeaveAllowance = await LeaveAllowance.create({
+        user_id: newUser.id, // Menggunakan ID pengguna yang baru dibuat
+        total_days: leaveAllowance,
         created_at: new Date(),
         created_by: user_id
       });
@@ -69,7 +107,15 @@ const userController = {
   updateUserData1: async (req: Request, res: Response) => {
     try {
       const userId = req.params.id;
-      const { name, email, telephone, user_id } = req.body;
+      const { name, email, telephone } = req.body;
+      const token = req.headers.authorization?.split(' ')[1];
+
+      if (!token) {
+        return res.status(401).json({ error: 'No token provided' });
+      }
+
+      const decoded = jwt.verify(token, 'your_secret_key') as { userId: number };
+      const user_id = decoded.userId;
 
       // Lakukan update data pengguna
       const [updatedRowsCount] = await User.update({ 
@@ -94,7 +140,15 @@ const userController = {
   updateUserData2: async (req: Request, res: Response) => {
     try {
       const userId = req.params.id;
-      const { position, department, user_id } = req.body;
+      const { position, department } = req.body;
+      const token = req.headers.authorization?.split(' ')[1];
+
+      if (!token) {
+        return res.status(401).json({ error: 'No token provided' });
+      }
+
+      const decoded = jwt.verify(token, 'your_secret_key') as { userId: number };
+      const user_id = decoded.userId;
 
       // Lakukan update data pengguna
       const [updatedRowsCount] = await User.update({ 
@@ -142,9 +196,10 @@ const userController = {
       }
 
       const decoded = jwt.verify(token, 'your_secret_key') as { userId: number };
+      const user_id = decoded.userId
 
       // Temukan pengguna berdasarkan ID yang didekodekan dari token
-      const user = await User.findByPk(decoded.userId);
+      const user = await User.findByPk(user_id);
 
       if (!user) {
         return res.status(404).json({ error: 'User not found' });
@@ -158,30 +213,30 @@ const userController = {
     }
   },
 
-  updateUserData3: async (req: Request, res: Response): Promise<void> => {
-    try {
-      const userId = req.params.id;
-      const plainPassword = '1234'; // Password tanpa hash
+  // updateUserData3: async (req: Request, res: Response): Promise<void> => {
+  //   try {
+  //     const userId = req.params.id;
+  //     const plainPassword = '1234'; // Password tanpa hash
   
-      // Hash password dengan bcrypt
-      const hashedPassword = await bcrypt.hash(plainPassword, 10);
+  //     // Hash password dengan bcrypt
+  //     const hashedPassword = await bcrypt.hash(plainPassword, 10);
   
-      // Perbarui password di database dengan nilai yang telah di-hash
-      const [updatedRowsCount] = await User.update(
-        { password: hashedPassword },
-        { where: { id: userId } }
-      );
+  //     // Perbarui password di database dengan nilai yang telah di-hash
+  //     const [updatedRowsCount] = await User.update(
+  //       { password: hashedPassword },
+  //       { where: { id: userId } }
+  //     );
   
-      if (updatedRowsCount === 0) {
-        res.status(404).json({ error: 'User not found' });
-      } else {
-        res.json({ message: 'User data updated successfully' });
-      }
-    } catch (error) {
-      console.error('Error while updating user data:', error);
-      res.status(500).json({ error: 'Unable to update user data' });
-    }
-  },
+  //     if (updatedRowsCount === 0) {
+  //       res.status(404).json({ error: 'User not found' });
+  //     } else {
+  //       res.json({ message: 'User data updated successfully' });
+  //     }
+  //   } catch (error) {
+  //     console.error('Error while updating user data:', error);
+  //     res.status(500).json({ error: 'Unable to update user data' });
+  //   }
+  // },
 }
 
 export default userController

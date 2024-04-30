@@ -3,7 +3,7 @@ import User from '../db/models/userModel';
 import LeaveAllowance from '../db/models/leaveAllowanceModel';
 
 
-const job = new cron.CronJob('0 0 1 1 *', async () => {
+const job = new cron.CronJob('0 0 1 * *', async () => {
     try {
         const usersWithLeaveAllowance = await User.findAll({
             include: [LeaveAllowance], 
@@ -29,6 +29,8 @@ const job = new cron.CronJob('0 0 1 1 *', async () => {
                 leaveAllowance = 13;
             } else if (diffMonths >= 12) {
                 leaveAllowance = 12;
+            } else {
+                leaveAllowance = 0;
             }
 
             await LeaveAllowance.update(

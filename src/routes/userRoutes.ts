@@ -20,5 +20,5 @@ router.delete("/:id", verifyToken, userController.deleteUser)
 // router.put("/update2/:id", userController.updateUserData2)
 // router.delete("/:id", userController.deleteUser)
 
-router.put("/update3/:id", userController.updateUserData3)
+// router.put("/update3/:id", userController.updateUserData3)
 export default router;

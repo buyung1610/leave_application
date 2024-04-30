@@ -54,9 +54,10 @@ const authController = {
             }
 
             const decoded = jwt.verify(token, 'your_secret_key') as { userId: number };
+            const user_id = decoded.userId
 
             // Temukan pengguna berdasarkan ID yang didekodekan dari token
-            const user = await User.findByPk(decoded.userId);
+            const user = await User.findByPk(user_id);
 
             if (!user) {
             return res.status(404).json({ error: 'User not found' });
