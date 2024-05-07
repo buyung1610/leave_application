@@ -13,8 +13,7 @@ declare global {
 export const verifyToken = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const token = req.headers.authorization?.split(' ')[1];
-        // const token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjM2LCJlbWFpbCI6ImZhamFyLmJ1eXVuZ0BkZXB0ZWNoZGlnaXRhbC5pZCIsImlhdCI6MTcxNDExNzY4NiwiZXhwIjoxNzE0MTIxMjg2fQ.uBrwqF0FVArKvWtCshiq5owTgq4B5jQEP4pZfxfN8TI"
-        
+       
         if (!token) {
             return res.status(401).json({ error: 'No token provided' });
         }

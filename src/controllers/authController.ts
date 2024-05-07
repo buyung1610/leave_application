@@ -3,44 +3,50 @@ import jwt from 'jsonwebtoken';
 import User from "../db/models/userModel";
 import bcrypt from 'bcrypt'
 import { JwtPayload } from '../db/types';
-import crypto from "crypto"
+import { validationResult } from 'express-validator';
 
 const authController = {
     loginController : async (req: Request, res: Response): Promise<void> => {
-        try {
-            const { email, password } = req.body;
-        
-            // Temukan pengguna berdasarkan email
-            const user = await User.findOne({ where: { email } });
-        
-            if (!user) {
-              res.status(404).json({ error: 'User not found' });
-              return;
-            }
-        
-            // Bandingkan kata sandi yang diberikan dengan kata sandi yang di-hash dalam database menggunakan bcrypt
-            const isMatch = await bcrypt.compare(password, user.password);
-        
-            if (!isMatch) {
-              res.status(401).json({ error: 'Incorrect password' });
-              return;
-            }
-        
-            // Buat payload untuk token JWT
-            const payload = {
-              userId: user.id,
-              email: user.email,
-            };
-        
-            // Buat token JWT menggunakan payload dan secret key
-            const token = jwt.sign(payload, 'your_secret_key', { expiresIn: '1h' });
-        
-            // Kirim token JWT sebagai respons
-            res.status(200).json({ token });
-          } catch (error) {
-            console.error('Error during login:', error);
-            res.status(500).json({ error: 'Unable to process login' });
+        try { 
+          const { email, password } = req.body;
+          if (!email) {
+            res.status(400).json({ error: 'Email is required' });
+          } 
+          if (!password) {
+            res.status(400).json({ error: 'password is required' });
           }
+      
+          // Temukan pengguna berdasarkan email
+          const user = await User.findOne({ where: { email } });
+      
+          if (!user) {
+            res.status(404).json({ error: 'User not found' });
+            return;
+          }
+      
+          // Bandingkan kata sandi yang diberikan dengan kata sandi yang di-hash dalam database menggunakan bcrypt
+          const isMatch = await bcrypt.compare(password, user.password);
+      
+          if (!isMatch) {
+            res.status(401).json({ error: 'Incorrect password' });
+            return;
+          }
+      
+          // Buat payload untuk token JWT
+          const payload = {
+            userId: user.id,
+            email: user.email,
+          };
+      
+          // Buat token JWT menggunakan payload dan secret key
+          const token = jwt.sign(payload, 'your_secret_key', { expiresIn: '24h' });
+      
+          // Kirim token JWT sebagai respons
+          res.status(200).json({ token });
+        } catch (error) {
+          console.error('Error during login:', error);
+          res.status(500).json({ error: 'Unable to process login' });
+        }
     },
 
     changePassword: async (req: Request, res: Response) => { 

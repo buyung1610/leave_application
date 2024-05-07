@@ -1,5 +1,6 @@
 import { DataTypes, Model } from 'sequelize';
 import sequelize from '../../config/dbConnection';
+import LeaveAllowance from './leaveAllowanceModel';
 
 interface UserAttributes {
   id?: number;
@@ -35,6 +36,16 @@ class User extends Model<UserAttributes> implements UserAttributes {
   public created_by!: number | null;
   public updated_by!: number | null;
   public deleted_by!: number | null;
+
+  public readonly leaveAllowance?: LeaveAllowance; // Optional association
+
+  // Static method untuk menginisialisasi model dan asosiasi
+  public static initializeAssociations() {
+    this.hasOne(LeaveAllowance, {
+      foreignKey: 'user_id', // Assuming the foreign key in LeaveAllowance is user_id
+      as: 'leaveAllowance' // Define an alias for the association
+    });
+  }
 }
 
 User.init(
@@ -91,7 +102,7 @@ User.init(
       allowNull: true,
     },
     created_by: {
-      type: DataTypes.DATE,
+      type: DataTypes.INTEGER.UNSIGNED,
       allowNull: true,
     },
     updated_by: {
@@ -112,3 +123,4 @@ User.init(
 );
 
 export default User;
+

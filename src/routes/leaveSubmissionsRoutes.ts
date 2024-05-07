@@ -4,8 +4,8 @@ import { verifyToken } from "../middleware/verifyToken";
 
 const router = express.Router();
 
-
-router.get("/", verifyToken, submissionController.getAllSubmission);
+router.get("/", verifyToken, submissionController.getAllSubmission);    
+router.get("/login", verifyToken, submissionController.getSubmissionLogin);
 router.get("/:id", verifyToken, submissionController.getSubmissionById);
 router.get("/:status", verifyToken, submissionController.getSubmissionByStatus);
 router.post("/", verifyToken, submissionController.createSubmission)
@@ -20,6 +20,5 @@ router.delete("/:id", verifyToken, submissionController.deleteSubmission);
 // router.put("/:id", submissionController.updateSubmission);
 // router.put("/status/:id", submissionController.updateSubmissionStatus);
 // router.delete("/:id", submissionController.deleteSubmission);
-
 
 export default router;

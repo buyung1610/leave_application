@@ -7,11 +7,45 @@ import LeaveAllowance from "../db/models/leaveAllowanceModel";
 const userController = {
   getAllUser: async (req: Request, res: Response) => {
     try {
-      // Mengambil semua data dari tabel User
-      const users = await User.findAll();
-      res.status(200).json(users);
+      const { page, limit } = req.query;
+      const sort_by = req.query.sort_by as string || 'asc';
+      const sort_field = req.query.sort_field as string || "id";
+
+      const parsedPage = parseInt(page as string) || 1;
+      const parsedLimit = parseInt(limit as string) || Number.MAX_SAFE_INTEGER;
+
+      // Validate sort_by and sort_field values
+      const validSortBy = ['asc', 'desc'];
+      const isValidSortBy = validSortBy.includes(sort_by as string);
+      const isValidSortField = typeof sort_field === 'string'; // Additional validation based on your column names
+
+      if (!isValidSortBy || !isValidSortField) {
+        return res.status(400).json({ error: 'Invalid sort_by or sort_field' });
+      }
+
+      const offset = (parsedPage - 1) * parsedLimit;
+  
+      const users = await User.findAndCountAll({
+        limit: parsedLimit,
+        offset: offset,
+        order: [[sort_field, sort_by]],
+        include: [
+          {
+            model: LeaveAllowance,
+            as: 'leaveAllowance',
+            attributes: ['total_days']
+          }
+        ]
+      });
+  
+      const totalPages = Math.ceil(users.count / parsedLimit);
+  
+      res.status(200).json({
+        users: users.rows,
+        currentPage: parsedPage,
+        totalPages: totalPages
+      });
     } catch (error) {
-      // Menangani kesalahan jika terjadi
       console.error('Error while fetching users:', error);
       res.status(500).json({ error: 'Unable to fetch users' });
     }
@@ -20,7 +54,7 @@ const userController = {
   // Method untuk membuat pengguna baru
   createUser: async (req: Request, res: Response) => {
     try {
-      const { nama, email, password, position, department, telephone, join_date, gender } = req.body;
+      const { name, email, position, department, telephone, join_date, gender } = req.body;
       const token = req.headers.authorization?.split(' ')[1];
 
       if (!token) {
@@ -29,7 +63,35 @@ const userController = {
 
       const decoded = jwt.verify(token, 'your_secret_key') as { userId: number };
       const user_id = decoded.userId;
-  
+      
+      if (!name) {
+        return res.status(400).json({ error: 'Name is required' });
+      }
+      
+      if (!email) {
+        return res.status(400).json({ error: 'Email is required' });
+      }
+      
+      if (!position) {
+        return res.status(400).json({ error: 'Position is required' });
+      }
+      
+      if (!department) {
+        return res.status(400).json({ error: 'Department is required' });
+      }
+      
+      if (!telephone) {
+        return res.status(400).json({ error: 'Telephone is required' });
+      }
+      
+      if (!join_date) {
+        return res.status(400).json({ error: 'Join date is required' });
+      }
+      
+      if (!gender) {
+        return res.status(400).json({ error: 'Gender is required' });
+      }
+
       // Mengecek apakah email sudah ada di dalam database
       const existingUser = await User.findOne({ where: { email: email } });
       if (existingUser) {
@@ -37,11 +99,11 @@ const userController = {
       }
   
       // Hash password menggunakan bcrypt
-      const hashedPassword = await bcrypt.hash(password, 10);
+      const hashedPassword = await bcrypt.hash('1234', 10);
   
       // Membuat pengguna baru dengan password yang di-hash
       const newUser = await User.create({
-        name: nama,
+        name,
         email,
         password: hashedPassword,
         position,
@@ -104,10 +166,10 @@ const userController = {
     }
   },
 
-  updateUserData1: async (req: Request, res: Response) => {
+  updateUserData: async (req: Request, res: Response) => {
     try {
       const userId = req.params.id;
-      const { name, email, telephone } = req.body;
+      const { name, email, position, department, telephone, join_date, gender } = req.body;
       const token = req.headers.authorization?.split(' ')[1];
 
       if (!token) {
@@ -116,46 +178,46 @@ const userController = {
 
       const decoded = jwt.verify(token, 'your_secret_key') as { userId: number };
       const user_id = decoded.userId;
+
+      if (!name) {
+        return res.status(400).json({ error: 'Name is required' });
+      }
+      
+      if (!email) {
+        return res.status(400).json({ error: 'Email is required' });
+      }
+      
+      if (!position) {
+        return res.status(400).json({ error: 'Position is required' });
+      }
+      
+      if (!department) {
+        return res.status(400).json({ error: 'Department is required' });
+      }
+      
+      if (!telephone) {
+        return res.status(400).json({ error: 'Telephone is required' });
+      }
+      
+      if (!join_date) {
+        return res.status(400).json({ error: 'Join date is required' });
+      }
+      
+      if (!gender) {
+        return res.status(400).json({ error: 'Gender is required' });
+      }
 
       // Lakukan update data pengguna
       const [updatedRowsCount] = await User.update({ 
         name, 
         email, 
+        position,
+        department,
         telephone,
+        join_date,
+        gender,
         updated_at: new Date(),
         updated_by: user_id
-      }, { where: { id: userId } });
-
-      if (updatedRowsCount === 0) {
-        res.status(404).json({ error: 'User not found' });
-      } else {
-        res.status(200).json({ message: 'User data updated successfully' });
-      }
-    } catch (error) {
-      console.error('Error while updating user data:', error);
-      res.status(500).json({ error: 'Unable to update user data' });
-    }
-  },
-
-  updateUserData2: async (req: Request, res: Response) => {
-    try {
-      const userId = req.params.id;
-      const { position, department } = req.body;
-      const token = req.headers.authorization?.split(' ')[1];
-
-      if (!token) {
-        return res.status(401).json({ error: 'No token provided' });
-      }
-
-      const decoded = jwt.verify(token, 'your_secret_key') as { userId: number };
-      const user_id = decoded.userId;
-
-      // Lakukan update data pengguna
-      const [updatedRowsCount] = await User.update({ 
-        position, 
-        department,
-        updated_at: new Date(),
-        updated_by: user_id 
       }, { where: { id: userId } });
 
       if (updatedRowsCount === 0) {

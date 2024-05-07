@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import LeaveSubmission from "../db/models/leaveSubmissionModel";
 import LeaveAllowance from "../db/models/leaveAllowanceModel";
+import jwt from "jsonwebtoken"
 
 const leaveSubmissionController = {
     getAllSubmission: async (req: Request, res: Response) => {
@@ -12,6 +13,70 @@ const leaveSubmissionController = {
             // Menangani kesalahan jika terjadi
             console.error('Error while fetching submissions:', error);
             res.status(500).json({ error: 'Unable to fetch submissions' });
+      }
+    },
+
+    
+    getSubmissionById: async (req: Request, res: Response) => {
+      try{
+        const submissionId = req.params.id;
+        const submission = await LeaveSubmission.findByPk(submissionId);
+        if (submission) {
+          res.status(200).json(submission);
+        } else {
+          res.status(404).json({ error: 'submission not found' })
+        }
+      } catch (error) {
+        console.error('Error while fetching submission by id:', error);
+        res.status(500).json({ error: 'Unable to fetch submission' });
+      }
+    },
+
+    getSubmissionByStatus: async (req: Request, res: Response) => {
+      try {
+        const { status } = req.params;
+
+        const submissions = await LeaveSubmission.findAll({
+            where: {
+                status: status // Menyaring berdasarkan status
+            }
+        });
+
+        if (submissions && submissions.length > 0) {
+            res.status(200).json(submissions);
+        } else {
+            res.status(404).json({ error: 'Submissions not found for the specified status' });
+        }
+      } catch (error) {
+        console.error('Error while fetching submission by id:', error);
+        res.status(500).json({ error: 'Unable to fetch submission' });
+      }
+    },
+
+    getSubmissionLogin: async (req: Request, res: Response) => {
+      try{
+        const token = req.headers.authorization?.split(' ')[1];
+
+        if (!token) {
+          return res.status(401).json({ error: 'No token provided' });
+        }
+
+        const decoded = jwt.verify(token, 'your_secret_key') as { userId: number };
+        const user_id = decoded.userId;
+
+        const submissions = await LeaveSubmission.findAll({
+          where: {
+              user_id: user_id // Menyaring berdasarkan status
+          }
+        });
+        if (submissions && submissions.length > 0) {
+          res.status(200).json(submissions);
+        } else {
+          res.status(404).json({ error: 'submission not found' })
+        }
+      } catch (error) {
+        console.error('Error while fetching submission by id:', error);
+        res.status(500).json({ error: 'Unable to fetch submission' });
       }
     },
 
@@ -46,36 +111,6 @@ const leaveSubmissionController = {
         res.status(201).json({ message: 'Leave submission created successfully', data: leaveSubmission });
       } catch (error) {
         res.status(500).json({ error: error});
-      }
-    },
-
-    getSubmissionById: async (req: Request, res: Response) => {
-      try{
-        const submissionId = req.params.id;
-        const submission = await LeaveSubmission.findByPk(submissionId);
-        if (submission) {
-          res.status(200).json(submission);
-        } else {
-          res.status(404).json({ error: 'submission not found' })
-        }
-      } catch (error) {
-        console.error('Error while fetching submission by id:', error);
-        res.status(500).json({ error: 'Unable to fetch submission' });
-      }
-    },
-
-    getSubmissionByStatus: async (req: Request, res: Response) => {
-      try{
-        const submissionId = req.params.status;
-        const submission = await LeaveSubmission.findByPk(submissionId);
-        if (submission) {
-          res.status(200).json(submission);
-        } else {
-          res.status(404).json({ error: 'submission not found' })
-        }
-      } catch (error) {
-        console.error('Error while fetching submission by id:', error);
-        res.status(500).json({ error: 'Unable to fetch submission' });
       }
     },
 
