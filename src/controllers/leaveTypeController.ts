@@ -1,12 +1,20 @@
-import { Request, Response, response } from "express";
+import { Request, Response } from "express";
 import LeaveType from "../db/models/leaveTypeModel";
 import jwt from "jsonwebtoken";
 
 const leaveTypeController = {
     getAll: async (req: Request, res: Response) => {
         try {
-          const Type = await LeaveType.findAll();
-          res.status(200).json(Type);
+          let whereClause: any = {}; // Inisialisasi klausa where untuk query findAll
+
+        // Periksa apakah query parameter is_emergency ada dalam req.query
+          if (req.query.is_emergency !== undefined) {
+              const is_emergency = req.query.is_emergency as string;
+              whereClause.is_emergency = is_emergency; // Konversi nilai string menjadi boolean
+          }
+
+          const types = await LeaveType.findAll({ where: whereClause });
+          res.status(200).json(types);
         } catch (error) {
           // Menangani kesalahan jika terjadi
           console.error('Error while fetching users:', error);

@@ -4,7 +4,7 @@ import sequelize from '../../config/dbConnection';
 interface LeaveTypeAttributes {
   id?: number;
   type: string;
-  is_emergency: boolean;
+  is_emergency: number;
   created_at: Date;
   updated_at: Date | null;
   deleted_at: Date | null;
@@ -16,7 +16,7 @@ interface LeaveTypeAttributes {
 class LeaveType extends Model<LeaveTypeAttributes> implements LeaveTypeAttributes {
   public id!: number;
   public type!: string;
-  public is_emergency!: boolean;
+  public is_emergency!: number;
   public created_at!: Date;
   public updated_at!: Date | null;
   public deleted_at!: Date | null;
@@ -38,7 +38,7 @@ LeaveType.init(
       allowNull: false,
     },
     is_emergency: {
-      type: DataTypes.BOOLEAN,
+      type: DataTypes.TINYINT,
       allowNull: false,
     },
     created_at: {

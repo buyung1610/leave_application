@@ -1,5 +1,6 @@
 import { DataTypes, Model } from 'sequelize';
 import sequelize from '../../config/dbConnection';
+import LeaveSubmission from './leaveSubmissionModel';
 
 interface LeaveAllowanceAttributes {
   id?: number;
@@ -23,6 +24,7 @@ class LeaveAllowance extends Model<LeaveAllowanceAttributes> implements LeaveAll
   public created_by!: number;
   public updated_by!: number | null;
   public deleted_by!: number | null;
+  static total_days: any;
 }
 
 LeaveAllowance.init(

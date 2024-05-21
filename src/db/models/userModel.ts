@@ -1,12 +1,15 @@
 import { DataTypes, Model } from 'sequelize';
 import sequelize from '../../config/dbConnection';
 import LeaveAllowance from './leaveAllowanceModel';
+import { format } from 'date-fns';
+import LeaveSubmission from './leaveSubmissionModel';
 
 interface UserAttributes {
   id?: number;
   name: string;
   email: string;
   password: string;
+  role: string;
   position: string;
   department: string;
   telephone?: string;
@@ -21,10 +24,14 @@ interface UserAttributes {
 }
 
 class User extends Model<UserAttributes> implements UserAttributes {
+  roles(roles: any) {
+      throw new Error('Method not implemented.');
+  }
   public id!: number;
   public name!: string;
   public email!: string;
   public password!: string;
+  public role!: string;
   public position!: string;
   public department!: string;
   public telephone!: string;
@@ -48,6 +55,7 @@ class User extends Model<UserAttributes> implements UserAttributes {
   }
 }
 
+
 User.init(
   {
     id: {
@@ -65,6 +73,10 @@ User.init(
       allowNull: false,
     },
     password: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
+    role: {
       type: DataTypes.STRING,
       allowNull: false,
     },
@@ -121,6 +133,8 @@ User.init(
     timestamps: false,
   }
 );
+
+// User.hasMany(LeaveSubmission, { foreignKey: 'user_id' });
 
 export default User;
 

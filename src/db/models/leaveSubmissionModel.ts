@@ -1,5 +1,8 @@
 import { DataTypes, Model } from 'sequelize';
 import sequelize from '../../config/dbConnection';
+import User from './userModel';
+import LeaveType from './leaveTypeModel';
+import LeaveAllowance from './leaveAllowanceModel';
 
 interface LeaveSubmissionAttributes {
   id?: number;
@@ -11,8 +14,8 @@ interface LeaveSubmissionAttributes {
   end_date: Date;
   emergency_call: string;
   description: string | null;
-  status: 'accepted' | 'rejected' | 'onprocess' | null;
-  created_at: Date;
+  status: 'Diterima' | 'Ditolak' | 'Pending' | null;
+  created_at: Date | null;
   updated_at: Date | null;
   deleted_at: Date | null;
   created_by: number;
@@ -21,6 +24,9 @@ interface LeaveSubmissionAttributes {
 }
 
 class LeaveSubmission extends Model<LeaveSubmissionAttributes> implements LeaveSubmissionAttributes {
+  map(arg0: (submission: any) => { id: any; name: any; submissionDate: string | null; telephone: any; emergencyCall: any; position: any; department: any; startDate: any; endDate: any; totalDays: any; leaveType: any; description: any; leaveAllowance: any; status: any; approver: any; }) {
+    throw new Error("Method not implemented.");
+  }
   public id!: number;
   public user_id!: number | null;
   public leave_type_id!: number | null;
@@ -30,13 +36,17 @@ class LeaveSubmission extends Model<LeaveSubmissionAttributes> implements LeaveS
   public end_date!: Date;
   public emergency_call!: string;
   public description!: string | null;
-  public status!: 'accepted' | 'rejected' | 'onprocess' | null;
-  public created_at!: Date;
+  public status!: 'Diterima' | 'Ditolak' | 'Pending' | null;
+  public created_at!: Date | null;
   public updated_at!: Date | null;
   public deleted_at!: Date | null;
   public created_by!: number;
   public updated_by!: number | null;
   public deleted_by!: number | null;
+  User: any;
+  LeaveType: any;
+  LeaveAllowance: any;
+  Approver: any;
 }
 
 LeaveSubmission.init(
@@ -93,14 +103,13 @@ LeaveSubmission.init(
       allowNull: true,
     },
     status: {
-      type: DataTypes.ENUM('accepted', 'rejected', 'onprocess'),
+      type: DataTypes.ENUM('Diterima', 'Ditolak', 'Pending'),
       allowNull: false,
-      defaultValue: 'onprocess',
+      defaultValue: 'Pending',
     },
     created_at: {
       type: DataTypes.DATE,
-      allowNull: false,
-      defaultValue: DataTypes.NOW,
+      allowNull: true,
     },
     updated_at: {
       type: DataTypes.DATE,
@@ -142,5 +151,18 @@ LeaveSubmission.init(
     timestamps: false,
   }
 );
+
+LeaveSubmission.belongsTo(User, { foreignKey: 'user_id' });
+User.hasMany(LeaveSubmission, { foreignKey: 'user_id' });
+
+LeaveSubmission.belongsTo(LeaveType, { foreignKey: 'leave_type_id' });
+LeaveType.hasMany(LeaveSubmission, { foreignKey: 'leave_type_id' });
+
+// Manual association
+LeaveSubmission.belongsTo(LeaveAllowance, { foreignKey: 'user_id', targetKey: 'user_id' });
+LeaveAllowance.hasMany(LeaveSubmission, { foreignKey: 'user_id' });
+
+LeaveSubmission.belongsTo(User, { foreignKey: 'approver_user_id', as: 'Approver' });
+User.hasMany(LeaveSubmission, { foreignKey: 'approver_user_id' });
 
 export default LeaveSubmission;

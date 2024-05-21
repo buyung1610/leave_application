@@ -9,6 +9,11 @@ import allowanceRoutes from './routes/leaveAllowanceRoutes';
 import leaveType from './routes/leaveTypeRoutes'
 import './jobs/updateLeaveAllowance';
 import User from './db/models/userModel';
+// const express = require('express');
+const multer = require('multer');
+const path = require('path');
+import { Request, Response } from "express";
+
 
 const app = express();
 
@@ -22,7 +27,7 @@ app.use('/auth', authRoutes)
 app.use('/users', userRoutes);
 app.use('/submissions', submissionRoutes)
 app.use('/allowance', allowanceRoutes)
-app.use('/type', leaveType)
+app.use('/leave-types', leaveType)
 
 
 const ip = '192.168.10.26'

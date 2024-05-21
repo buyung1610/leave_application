@@ -5,7 +5,12 @@ import { body } from 'express-validator';
 
 const router = express.Router();
 
-router.post("/login", authController.loginController)
-router.put("/changePassword", authController.changePassword)
+router.post("/login",[
+    body('email').isEmail().withMessage('Invalid email'),
+    body('email').notEmpty().withMessage('Email is required'),
+    body('password').isLength({ min: 4 }).withMessage('Password must be at least 4 characters long')
+], authController.loginController)
+
+router.put("/changePassword", verifyToken, authController.changePassword)
 
 export default router;

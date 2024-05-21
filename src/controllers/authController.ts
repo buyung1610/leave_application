@@ -8,13 +8,13 @@ import { validationResult } from 'express-validator';
 const authController = {
     loginController : async (req: Request, res: Response): Promise<void> => {
         try { 
-          const { email, password } = req.body;
-          if (!email) {
-            res.status(400).json({ error: 'Email is required' });
-          } 
-          if (!password) {
-            res.status(400).json({ error: 'password is required' });
+          const errors = validationResult(req);
+          if (!errors.isEmpty()) {
+           res.status(400).json({ errors: errors.array() });
+           return
           }
+          
+          const { email, password } = req.body;
       
           // Temukan pengguna berdasarkan email
           const user = await User.findOne({ where: { email } });
@@ -35,7 +35,7 @@ const authController = {
           // Buat payload untuk token JWT
           const payload = {
             userId: user.id,
-            email: user.email,
+            role: user.role,
           };
       
           // Buat token JWT menggunakan payload dan secret key
