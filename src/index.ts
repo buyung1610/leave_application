@@ -32,7 +32,7 @@ app.get('/api', (req, res) => {
 
 
 const ip = '192.168.10.10'
-const port = 3001 ;
+const port = 3002 ;
 app.listen(port, ip, () => {
   console.log(`Server is running on ${ip}:${port}`);
 });
