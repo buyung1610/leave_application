@@ -3,14 +3,6 @@ import jwt, { TokenExpiredError } from 'jsonwebtoken';
 import User from '../db/models/userModel';
 import { JwtPayload } from '../db/types';
 
-declare global {
-    namespace Express {
-        interface Request {
-            user?: User;
-        }
-    }
-}
-
 export const verifyToken = async (req: Request, res: Response, next: NextFunction) => {
   try {
       const token = req.headers.authorization?.split(' ')[1];
@@ -57,7 +49,7 @@ export const authorize = (roles: string[]) => {
         if (position && roles.includes(position)) {
           return next();
         } else {
-          return res.status(403).json({ message: 'Forbidden' });
+          return res.status(403).json({ error: 'Access denied: the employee role cannot access this resource.' });
         }
       } catch (error) {
         return res.status(403).json({ message: 'Invalid token' });

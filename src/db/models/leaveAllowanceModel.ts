@@ -6,24 +6,26 @@ interface LeaveAllowanceAttributes {
   id?: number;
   user_id: number | null;
   total_days: number | null;
-  created_at: Date;
+  created_at: Date | null;
   updated_at: Date | null;
   deleted_at: Date | null;
-  created_by: number;
+  created_by: number | null;
   updated_by: number | null;
   deleted_by: number | null;
+  is_deleted?: number;
 }
 
 class LeaveAllowance extends Model<LeaveAllowanceAttributes> implements LeaveAllowanceAttributes {
   public id!: number;
   public user_id!: number | null;
   public total_days!: number | null;
-  public created_at!: Date;
+  public created_at!: Date | null;
   public updated_at!: Date | null;
   public deleted_at!: Date | null;
-  public created_by!: number;
+  public created_by!: number | null;
   public updated_by!: number | null;
   public deleted_by!: number | null;
+  public is_deleted!: number;
   static total_days: any;
 }
 
@@ -49,8 +51,7 @@ LeaveAllowance.init(
     },
     created_at: {
       type: DataTypes.DATE,
-      allowNull: false,
-      defaultValue: DataTypes.NOW,
+      allowNull: true,
     },
     updated_at: {
       type: DataTypes.DATE,
@@ -62,7 +63,7 @@ LeaveAllowance.init(
     },
     created_by: {
       type: DataTypes.INTEGER,
-      allowNull: false,
+      allowNull: true,
       references: {
         model: 'users',
         key: 'id',
@@ -79,6 +80,14 @@ LeaveAllowance.init(
     deleted_by: {
       type: DataTypes.INTEGER,
       allowNull: true,
+      references: {
+        model: 'users',
+        key: 'id',
+      },
+    },
+    is_deleted: {
+      type: DataTypes.TINYINT,
+      allowNull: false,
       references: {
         model: 'users',
         key: 'id',

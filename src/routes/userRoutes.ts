@@ -8,11 +8,11 @@ const router = express.Router();
 
 router.get("/profil", verifyToken, userController.getUserProfil)
 
-router.get("/", verifyToken, userController.getAllUser);
+router.get("/", verifyToken, authorize(['staff', 'hr', 'owner']), userController.getAllUser);
 
-router.get("/:id", verifyToken, userController.getUserById)
+router.get("/:id", verifyToken, authorize(['staff', 'hr', 'owner']), userController.getUserById)
 
-router.post("/", verifyToken,[
+router.post("/", verifyToken, authorize(['staff', 'hr', 'owner']),[
     body('name').notEmpty().withMessage('Name is required'),
     body('email').isEmail().withMessage('Invalid email'),
     body('email').notEmpty().withMessage('Email is required'),
@@ -23,6 +23,8 @@ router.post("/", verifyToken,[
     body('gender').notEmpty().withMessage('Gender is required')
 ], userController.createUser)
 
+router.put("/delete/:id", verifyToken, authorize(['staff', 'hr', 'owner']), userController.softDeleteUser)
+
 router.put("/profil", verifyToken,[
     body('name').notEmpty().withMessage('Name is required'),
     body('email').isEmail().withMessage('Invalid email'),
@@ -30,7 +32,7 @@ router.put("/profil", verifyToken,[
     body('telephone').notEmpty().withMessage('Telephone is required'),
 ], userController.updateProfil)
 
-router.put("/:id", verifyToken,[
+router.put("/:id", authorize(['staff', 'hr', 'owner']), verifyToken,[
     body('name').notEmpty().withMessage('Name is required'),
     body('email').isEmail().withMessage('Invalid email'),
     body('email').notEmpty().withMessage('Email is required'),
@@ -43,7 +45,7 @@ router.put("/:id", verifyToken,[
 
 
 
-router.delete("/:id", verifyToken, userController.deleteUser)
+// router.delete("/:id", verifyToken, userController.deleteUser)
 
 // router.get("/", userController.getAllUser);
 // router.get("/:id", userController.getUserById)

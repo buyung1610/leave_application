@@ -1,7 +1,6 @@
 import { DataTypes, Model } from 'sequelize';
 import sequelize from '../../config/dbConnection';
 import LeaveAllowance from './leaveAllowanceModel';
-import { format } from 'date-fns';
 import LeaveSubmission from './leaveSubmissionModel';
 
 interface UserAttributes {
@@ -15,12 +14,15 @@ interface UserAttributes {
   telephone?: string;
   join_date: Date;
   gender: 'male' | 'female' | 'other';
-  created_at: Date;
+  created_at: Date | null;
   updated_at: Date | null;
   deleted_at: Date | null;
   created_by: number | null;
   updated_by: number | null;
   deleted_by: number | null;
+  is_deleted?: number;
+  resetToken: string | null;
+  resetTokenExpires: Date | null;
 }
 
 class User extends Model<UserAttributes> implements UserAttributes {
@@ -37,12 +39,15 @@ class User extends Model<UserAttributes> implements UserAttributes {
   public telephone!: string;
   public join_date!: Date;
   public gender!: 'male' | 'female' | 'other';
-  public created_at!: Date;
+  public created_at!: Date | null;
   public updated_at!: Date | null;
   public deleted_at!: Date | null;
   public created_by!: number | null;
   public updated_by!: number | null;
   public deleted_by!: number | null;
+  public is_deleted!: number;
+  public resetToken!: string | null;
+  public resetTokenExpires!: Date | null;
 
   public readonly leaveAllowance?: LeaveAllowance; // Optional association
 
@@ -54,7 +59,6 @@ class User extends Model<UserAttributes> implements UserAttributes {
     });
   }
 }
-
 
 User.init(
   {
@@ -102,8 +106,7 @@ User.init(
     },
     created_at: {
       type: DataTypes.DATE,
-      allowNull: false,
-      defaultValue: DataTypes.NOW,
+      allowNull: true,
     },
     updated_at: {
       type: DataTypes.DATE,
@@ -114,15 +117,43 @@ User.init(
       allowNull: true,
     },
     created_by: {
-      type: DataTypes.INTEGER.UNSIGNED,
+      type: DataTypes.INTEGER,
       allowNull: true,
+      references: {
+        model: 'users',
+        key: 'id',
+      },
     },
     updated_by: {
-      type: DataTypes.INTEGER.UNSIGNED,
+      type: DataTypes.INTEGER,
       allowNull: true,
+      references: {
+        model: 'users',
+        key: 'id',
+      },
     },
     deleted_by: {
-      type: DataTypes.INTEGER.UNSIGNED,
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      references: {
+        model: 'users',
+        key: 'id',
+      },
+    },
+    is_deleted: {
+      type: DataTypes.TINYINT,
+      allowNull: false,
+      references: {
+        model: 'users',
+        key: 'id',
+      },
+    },
+    resetToken: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    resetTokenExpires: {
+      type: DataTypes.DATE,
       allowNull: true,
     },
   },

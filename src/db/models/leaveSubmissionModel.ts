@@ -14,13 +14,15 @@ interface LeaveSubmissionAttributes {
   end_date: Date;
   emergency_call: string;
   description: string | null;
+  attachment: string | null;
   status: 'Diterima' | 'Ditolak' | 'Pending' | null;
   created_at: Date | null;
   updated_at: Date | null;
   deleted_at: Date | null;
-  created_by: number;
+  created_by: number | null;
   updated_by: number | null;
   deleted_by: number | null;
+  is_deleted?: number;
 }
 
 class LeaveSubmission extends Model<LeaveSubmissionAttributes> implements LeaveSubmissionAttributes {
@@ -36,13 +38,15 @@ class LeaveSubmission extends Model<LeaveSubmissionAttributes> implements LeaveS
   public end_date!: Date;
   public emergency_call!: string;
   public description!: string | null;
+  public attachment!: string | null;
   public status!: 'Diterima' | 'Ditolak' | 'Pending' | null;
   public created_at!: Date | null;
   public updated_at!: Date | null;
   public deleted_at!: Date | null;
-  public created_by!: number;
+  public created_by!: number | null;
   public updated_by!: number | null;
   public deleted_by!: number | null;
+  public is_deleted!: number;
   User: any;
   LeaveType: any;
   LeaveAllowance: any;
@@ -102,6 +106,10 @@ LeaveSubmission.init(
       type: DataTypes.TEXT,
       allowNull: true,
     },
+    attachment: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
     status: {
       type: DataTypes.ENUM('Diterima', 'Ditolak', 'Pending'),
       allowNull: false,
@@ -121,7 +129,7 @@ LeaveSubmission.init(
     },
     created_by: {
       type: DataTypes.INTEGER,
-      allowNull: false,
+      allowNull: true,
       references: {
         model: 'users',
         key: 'id',
@@ -138,6 +146,14 @@ LeaveSubmission.init(
     deleted_by: {
       type: DataTypes.INTEGER,
       allowNull: true,
+      references: {
+        model: 'users',
+        key: 'id',
+      },
+    },
+    is_deleted: {
+      type: DataTypes.TINYINT,
+      allowNull: false,
       references: {
         model: 'users',
         key: 'id',

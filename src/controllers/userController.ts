@@ -43,6 +43,9 @@ const userController = {
       }
 
       const users = await User.findAndCountAll({
+        where: {
+          is_deleted: 0
+        },
         limit: parsedLimit,
         offset: offset,
         order: order,
@@ -127,7 +130,8 @@ const userController = {
         join_date,
         gender,
         created_at: new Date(),
-        created_by: user_id
+        created_by: user_id,
+        is_deleted: 0
       });
 
       const joinDate = new Date(newUser.join_date);
@@ -156,7 +160,8 @@ const userController = {
         user_id: newUser.id, // Menggunakan ID pengguna yang baru dibuat
         total_days: leaveAllowance,
         created_at: new Date(),
-        created_by: user_id
+        created_by: user_id,
+        is_deleted: 0
       });
   
       res.status(201).json({ message: 'User created successfully', user: newUser });
@@ -181,7 +186,7 @@ const userController = {
       });
   
       // If user not found
-      if (!user) {
+      if (!user || user.is_deleted === 1) {
         return res.status(404).json({ error: 'User not found' });
       }
   
@@ -222,6 +227,11 @@ const userController = {
           if (!errors.isEmpty()) {
            res.status(400).json({ errors: errors.array() });
            return
+      }
+      const user: any = await User.findByPk(userIdParams)
+
+      if (!user || user.is_deleted === 1) {
+        return res.status(404).json({ error: 'User not found' });
       }
 
       const [updatedRowsCount] = await User.update(
@@ -303,6 +313,42 @@ const userController = {
     }
   },
 
+  softDeleteUser: async (req: Request, res: Response) => {
+    try {
+      const userId = req.params.id;
+
+      const token = req.headers.authorization?.split(' ')[1];
+
+      if (!token) {
+        return res.status(401).json({ error: 'No token provided' });
+      }
+
+      const decoded = jwt.verify(token, 'your_secret_key') as { userId: number };
+      const userIdLogin = decoded.userId;
+
+      const softDeletedLeaveAllowanceRowsCount = await LeaveAllowance.update({ 
+        deleted_at: new Date(),
+        deleted_by: userIdLogin,
+        is_deleted: 1
+      }, { where: { id: userId } });
+  
+      const softDeletedRowsCount = await User.update({ 
+        deleted_at: new Date(),
+        deleted_by: userIdLogin,
+        is_deleted: 1
+      }, { where: { id: userId } });
+  
+      if (softDeletedRowsCount[0] === 0) {
+        res.status(404).json({ error: 'User not found' });
+      } else {
+        res.status(200).json({ message: 'User deleted successfully' });
+      }
+    } catch (error) {
+      console.error('Error while deleting user:', error);
+      res.status(500).json({ error: 'Unable to delete user' });
+    }
+  },
+
   getUserProfil: async (req: Request, res: Response) => {
     try {
       const token = req.headers.authorization?.split(' ')[1];
@@ -325,7 +371,7 @@ const userController = {
       });
   
       // If user not found
-      if (!user) {
+      if (!user || user.is_deleted === 1) {
         return res.status(404).json({ error: 'User not found' });
       }
   
@@ -367,6 +413,13 @@ const userController = {
         res.status(400).json({ errors: errors.array() });
         return;
       }
+
+      const user: any = await User.findByPk(user_id);
+  
+      // If user not found
+      if (!user || user.is_deleted === 1) {
+        return res.status(404).json({ error: 'User not found' });
+      }
   
       // Update data pengguna
       const [updatedRowsCount] = await User.update(
@@ -395,30 +448,6 @@ const userController = {
     }
   },
 
-  // updateUserData3: async (req: Request, res: Response): Promise<void> => {
-  //   try {
-  //     const userId = req.params.id;
-  //     const plainPassword = '1234'; // Password tanpa hash
-  
-  //     // Hash password dengan bcrypt
-  //     const hashedPassword = await bcrypt.hash(plainPassword, 10);
-  
-  //     // Perbarui password di database dengan nilai yang telah di-hash
-  //     const [updatedRowsCount] = await User.update(
-  //       { password: hashedPassword },
-  //       { where: { id: userId } }
-  //     );
-  
-  //     if (updatedRowsCount === 0) {
-  //       res.status(404).json({ error: 'User not found' });
-  //     } else {
-  //       res.json({ message: 'User data updated successfully' });
-  //     }
-  //   } catch (error) {
-  //     console.error('Error while updating user data:', error);
-  //     res.status(500).json({ error: 'Unable to update user data' });
-  //   }
-  // },
 }
 
 export default userController

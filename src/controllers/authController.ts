@@ -17,9 +17,9 @@ const authController = {
           const { email, password } = req.body;
       
           // Temukan pengguna berdasarkan email
-          const user = await User.findOne({ where: { email } });
+          const user = await User.findOne({ where: { email: email } });
       
-          if (!user) {
+          if (!user || user.is_deleted === 1) {
             res.status(404).json({ error: 'User not found' });
             return;
           }
@@ -65,7 +65,7 @@ const authController = {
             // Temukan pengguna berdasarkan ID yang didekodekan dari token
             const user = await User.findByPk(user_id);
 
-            if (!user) {
+            if (!user || user.is_deleted === 1) {
             return res.status(404).json({ error: 'User not found' });
             }
 
@@ -95,5 +95,86 @@ const authController = {
         }
     }
 }
+
+
+// import nodemailer from 'nodemailer';
+// import crypto from 'crypto';
+// import { Op } from 'sequelize';
+// require('dotenv').config();
+
+// // Konfigurasi transporter untuk nodemailer
+// const transporter = nodemailer.createTransport({
+//   service: 'gmail',
+//   auth: {
+//     user: 'akunku444456@gmail.com', // Gunakan environment variable
+//     pass: '1610buyung', // Gunakan environment variable
+//   },
+// });
+
+// export const requestPasswordReset = async (req: Request, res: Response) => {
+//   try {
+//     const { email } = req.body;
+//     const user = await User.findOne({ where: { email } });
+
+//     if (!user) {
+//       return res.status(404).json({ error: 'Email not found' });
+//     }
+
+//     const resetToken = crypto.randomBytes(32).toString('hex');
+//     const resetTokenExpires = new Date(Date.now() + 3600000); // 1 jam
+
+//     user.resetToken = resetToken;
+//     user.resetTokenExpires = resetTokenExpires;
+//     await user.save();
+
+//     const resetUrl = `http://localhost:3000/reset-password/${resetToken}`;
+
+//     const mailOptions = {
+//       from: 'akunku444456@gmail.com', // Gunakan environment variable
+//       to: email,
+//       subject: 'Password Reset Request',
+//       text: `You requested for a password reset. Please use the following link to reset your password: ${resetUrl}`,
+//     };
+
+//     await transporter.sendMail(mailOptions);
+
+//     res.status(200).json({ message: 'Password reset link sent to your email' });
+//   } catch (error) {
+//     console.error('Error sending password reset email:', error);
+//     res.status(500).json({ error: 'Internal server error' });
+//   }
+// };
+
+
+// export const resetPassword = async (req: Request, res: Response) => {
+//   try {
+//     const { token, newPassword } = req.body;
+
+//     const user = await User.findOne({
+//       where: {
+//         resetToken: token,
+//         resetTokenExpires: {
+//           [Op.gt]: new Date(),
+//         },
+//       },
+//     });
+
+//     if (!user) {
+//       return res.status(400).json({ error: 'Invalid or expired token' });
+//     }
+
+//     const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+//     user.password = hashedPassword;
+//     user.resetToken = null;
+//     user.resetTokenExpires = null;
+//     await user.save();
+
+//     res.status(200).json({ message: 'Password has been reset successfully' });
+//   } catch (error) {
+//     console.error('Error resetting password:', error);
+//     res.status(500).json({ error: 'Internal server error' });
+//   }
+// };
 
 export default authController
