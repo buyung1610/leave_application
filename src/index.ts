@@ -8,7 +8,7 @@ import authRoutes from './routes/authRoutes';
 import leaveType from './routes/leaveTypeRoutes'
 import './jobs/updateLeaveAllowance';
 import User from './db/models/userModel';
-import path from 'path';
+import dotenv from 'dotenv'
 
 
 const app = express();
@@ -29,10 +29,8 @@ app.get('/api', (req, res) => {
 });
 
 
-
-
-const ip = '192.168.10.10'
-const port = 3002 ;
+const ip = process.env.IP || '0,0,0,0';
+const port = parseInt(process.env.PORT || '3000', 10)
 app.listen(port, ip, () => {
-  console.log(`Server is running on ${ip}:${port}`);
+  console.log(`Server is running on http://${ip}:${port}`);
 });
