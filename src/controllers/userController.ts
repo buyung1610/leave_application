@@ -90,7 +90,6 @@ const userController = {
     }
   },
   
-  // Method untuk membuat pengguna baru
   createUser: async (req: Request, res: Response) => {
     try {
       const { name, email, role, position, department, telephone, join_date, gender } = req.body;

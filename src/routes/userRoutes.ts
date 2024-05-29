@@ -8,11 +8,11 @@ const router = express.Router();
 
 router.get("/profil", verifyToken, userController.getUserProfil)
 
-router.get("/", verifyToken, authorize(['staff', 'hr', 'owner']), userController.getAllUser);
+router.get("/", verifyToken, userController.getAllUser);
 
-router.get("/:id", verifyToken, authorize(['staff', 'hr', 'owner']), userController.getUserById)
+router.get("/:id", verifyToken, userController.getUserById)
 
-router.post("/", verifyToken, authorize(['staff', 'hr', 'owner']),[
+router.post("/", verifyToken,[
     body('name').notEmpty().withMessage('Name is required'),
     body('email').isEmail().withMessage('Invalid email'),
     body('email').notEmpty().withMessage('Email is required'),
@@ -23,7 +23,7 @@ router.post("/", verifyToken, authorize(['staff', 'hr', 'owner']),[
     body('gender').notEmpty().withMessage('Gender is required')
 ], userController.createUser)
 
-router.put("/delete/:id", verifyToken, authorize(['staff', 'hr', 'owner']), userController.softDeleteUser)
+router.put("/delete/:id", verifyToken, userController.softDeleteUser)
 
 router.put("/profil", verifyToken,[
     body('name').notEmpty().withMessage('Name is required'),
@@ -32,7 +32,7 @@ router.put("/profil", verifyToken,[
     body('telephone').notEmpty().withMessage('Telephone is required'),
 ], userController.updateProfil)
 
-router.put("/:id", authorize(['staff', 'hr', 'owner']), verifyToken,[
+router.put("/:id", verifyToken,[
     body('name').notEmpty().withMessage('Name is required'),
     body('email').isEmail().withMessage('Invalid email'),
     body('email').notEmpty().withMessage('Email is required'),

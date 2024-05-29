@@ -6,8 +6,8 @@ import { body } from 'express-validator';
 
 const router = express.Router();
 
-// router.post('/request-password-reset', requestPasswordReset);
-// router.post('/reset-password', resetPassword);
+router.post('/request-password-reset', authController.forgotPassword);
+router.post('/reset-password', authController.resetPassword);
 
 
 router.post("/login",[

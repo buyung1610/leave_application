@@ -5,6 +5,11 @@ import bcrypt from 'bcrypt'
 import { JwtPayload } from '../db/types';
 import { validationResult } from 'express-validator';
 
+import nodemailer from 'nodemailer';
+import crypto from 'crypto';
+import { Op } from 'sequelize';
+require('dotenv').config();
+
 const authController = {
     loginController : async (req: Request, res: Response): Promise<void> => {
         try { 
@@ -93,9 +98,83 @@ const authController = {
             console.error('Error changing password:', error);
             res.status(500).json({ error: 'Internal server error' });
         }
+    },
+
+    forgotPassword: async (req: Request, res: Response): Promise<void> => {
+      try {
+        const { email } = req.body;
+        const user = await User.findOne({ where: { email } });
+    
+        if (!user) {
+          res.status(404).json({ error: 'Email not found' });
+          return
+        }
+    
+        const resetToken = crypto.randomInt(100000, 999999);
+        const resetTokenExpires = new Date(Date.now() + 3600000); // 1 jam
+    
+        user.resetToken = resetToken;
+        user.resetTokenExpires = resetTokenExpires;
+        await user.save();
+
+        const transporter = nodemailer.createTransport({
+          service: 'gmail',
+          auth: {
+            user: process.env.EMAIL_USER,
+            pass: process.env.EMAIL_PASS,
+          },
+        });
+    
+        const mailOptions = {
+          from: process.env.EMAIL_USER,
+          to: email,
+          subject: 'Password Reset Request',
+          text: `You requested for a password reset. Your verification code is: ${resetToken}`,
+        };
+    
+        await transporter.sendMail(mailOptions);
+    
+        res.status(200).json({ message: 'The verification code has been sent to your email' });
+      } catch (error) {
+        console.error('Error sending password reset email:', error);
+        res.status(500).json({ error: 'Internal server error' });
+      }
+    },
+
+    resetPassword: async (req: Request, res: Response): Promise<void> => {
+      try {
+        const { token, newPassword } = req.body;
+    
+        const user = await User.findOne({
+          where: {
+            resetToken: token,
+            resetTokenExpires: {
+              [Op.gt]: new Date(),
+            },
+          },
+        });
+    
+        if (!user) {
+          res.status(400).json({ error: 'Invalid or expired token' });
+          return
+        }
+    
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+    
+        user.password = hashedPassword;
+        user.resetToken = null;
+        user.resetTokenExpires = null;
+        await user.save();
+    
+        res.status(200).json({ message: 'Password has been reset successfully' });
+      } catch (error) {
+        console.error('Error resetting password:', error);
+        res.status(500).json({ error: 'Internal server error' });
+      }
     }
 }
 
+export default authController
 
 // import nodemailer from 'nodemailer';
 // import crypto from 'crypto';
@@ -176,5 +255,3 @@ const authController = {
 //     res.status(500).json({ error: 'Internal server error' });
 //   }
 // };
-
-export default authController

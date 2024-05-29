@@ -46,7 +46,7 @@ LeaveAllowance.init(
       },
     },
     total_days: {
-      type: DataTypes.INTEGER,
+      type: DataTypes.INTEGER.UNSIGNED,
       allowNull: true,
     },
     created_at: {

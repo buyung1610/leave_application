@@ -21,7 +21,7 @@ interface UserAttributes {
   updated_by: number | null;
   deleted_by: number | null;
   is_deleted?: number;
-  resetToken: string | null;
+  resetToken: number | null;
   resetTokenExpires: Date | null;
 }
 
@@ -46,7 +46,7 @@ class User extends Model<UserAttributes> implements UserAttributes {
   public updated_by!: number | null;
   public deleted_by!: number | null;
   public is_deleted!: number;
-  public resetToken!: string | null;
+  public resetToken!: number | null;
   public resetTokenExpires!: Date | null;
 
   public readonly leaveAllowance?: LeaveAllowance; // Optional association
@@ -149,7 +149,7 @@ User.init(
       },
     },
     resetToken: {
-      type: DataTypes.STRING,
+      type: DataTypes.INTEGER,
       allowNull: true,
     },
     resetTokenExpires: {
