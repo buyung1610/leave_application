@@ -716,42 +716,46 @@ const leaveSubmissionController = {
     
         const submissions = await LeaveSubmission.findAll(options);
     
-        if (submissions.length > 0) {
-          // Membuat array untuk menyimpan hasil pengolahan
-          
-          const { rows, count } = await LeaveSubmission.findAndCountAll(options);
+          if (submissions.length > 0) {
+            // Membuat array untuk menyimpan hasil pengolahan
+            
+            const { rows, count } = await LeaveSubmission.findAndCountAll(options);
 
-          const submissions = rows.map((submission: any) => {
-            // Mengonversi tanggal ke string ISO 8601 dan mengambil bagian tanggal saja
-            // const formattedDate = submission.created_at ? new Date (submission.created_at).toISOString().slice(0, 10) : null;
-            const formattedDate = submission.created_at ? format(new Date(submission.created_at), 'yyyy-MM-dd') : null;
-          
-            return {
-              id: submission.id,
-              name: submission.User ? submission.User.name : null,
-              submissionDate: formattedDate, // Menggunakan tanggal yang sudah diformat
-              telephone: submission.User ? submission.User.telephone : null,
-              emergencyCall: submission.emergency_call,
-              position: submission.User ? submission.User.position : null,
-              department: submission.User ? submission.User.department : null,
-              startDate: submission.start_date,
-              endDate: submission.end_date,
-              totalDays: submission.total_days,
-              leaveType: submission.LeaveType ? submission.LeaveType.type : null,
-              description: submission.description,
-              leaveAllowance: submission.LeaveAllowance ? submission.LeaveAllowance.total_days : null,
-              status: submission.status,
-              approver: submission.Approver ? submission.Approver.name : null,
-              attachment: submission.attachment,
-            };
-          });
-          res.status(200).json({
-            count,
-            submissions,
-          });
-        } else {
-          res.status(404).json({ error: 'Submissions not found',});
-        }
+            const submissions = rows.map((submission: any) => {
+              // Mengonversi tanggal ke string ISO 8601 dan mengambil bagian tanggal saja
+              // const formattedDate = submission.created_at ? new Date (submission.created_at).toISOString().slice(0, 10) : null;
+              const formattedDate = submission.created_at ? format(new Date(submission.created_at), 'yyyy-MM-dd') : null;
+            
+              return {
+                id: submission.id,
+                name: submission.User ? submission.User.name : null,
+                submissionDate: formattedDate, // Menggunakan tanggal yang sudah diformat
+                telephone: submission.User ? submission.User.telephone : null,
+                emergencyCall: submission.emergency_call,
+                position: submission.User ? submission.User.position : null,
+                department: submission.User ? submission.User.department : null,
+                startDate: submission.start_date,
+                endDate: submission.end_date,
+                totalDays: submission.total_days,
+                leaveType: submission.LeaveType ? submission.LeaveType.type : null,
+                description: submission.description,
+                leaveAllowance: submission.LeaveAllowance ? submission.LeaveAllowance.total_days : null,
+                status: submission.status,
+                approver: submission.Approver ? submission.Approver.name : null,
+                attachment: submission.attachment,
+              };
+            });
+            res.status(200).json({
+              count,
+              submissions,
+            });
+          } else {
+            res.status(200).json({
+              count: 0,
+              submissions: [],
+            });
+          }
+
       } catch (error) {
         console.error('Error while fetching submissions:', error);
         res.status(500).json({ error: 'Unable to fetch submissions' });
@@ -839,7 +843,10 @@ const leaveSubmissionController = {
             submissions,
           });
         } else {
-          res.status(404).json({ error: 'Submissions not found' });
+          res.status(200).json({
+            count: 0,
+            submissions: [],
+          });
         }
       } catch (error) {
         console.error('Error while fetching submissions:', error);
@@ -938,7 +945,10 @@ const leaveSubmissionController = {
             submissions,
           });
         } else {
-          res.status(404).json({ error: 'Submissions not found' });
+          res.status(200).json({
+            count: 0,
+            submissions: [],
+          });
         }
       } catch (error) {
         console.error('Error while fetching submissions:', error);
@@ -1037,8 +1047,11 @@ const leaveSubmissionController = {
             submissions,
           });
         } else {
-          res.status(404).json({ error: 'Submissions not found' });
-        }
+          res.status(200).json({
+            count: 0,
+            submissions: [],
+          });
+        } 
       } catch (error) {
         console.error('Error while fetching submissions:', error);
         res.status(500).json({ error: 'Unable to fetch submissions' });
