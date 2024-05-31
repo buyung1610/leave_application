@@ -1,6 +1,6 @@
 import { DataTypes, Model } from 'sequelize';
 import sequelize from '../../config/dbConnection';
-import LeaveSubmission from './leaveSubmissionModel';
+import User from './userModel';
 
 interface LeaveAllowanceAttributes {
   id?: number;
@@ -101,5 +101,11 @@ LeaveAllowance.init(
     timestamps: false,
   }
 );
+
+// LeaveAllowance.belongsTo(User, {
+//   foreignKey: 'user_id',
+//   targetKey: 'id',
+//   as: 'user', // alias for the association
+// });
 
 export default LeaveAllowance;

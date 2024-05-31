@@ -6,136 +6,139 @@ import { validationResult } from "express-validator";
 import { FindAndCountOptions, FindOptions, Op, where } from "sequelize";
 import User from "../db/models/userModel";
 import LeaveType from "../db/models/leaveTypeModel";
-import { endOfDay, format, startOfDay } from "date-fns";
+import { format } from "date-fns";
+import path from "path";
+import fs from 'fs';
 
 const leaveSubmissionController = {
     getAllSubmission: async (req: Request, res: Response) => {
-      try {
-        const { page, limit, status, leave_type_id, user_id } = req.query;
-        const sort_by = req.query.sort_by as string || 'asc';
-        const sort_field = req.query.sort_field as string || 'id';
-
-        const submissionCount = await LeaveSubmission.findAndCountAll()
+        try {
+          const { page, limit, status, leave_type_id, user_id } = req.query;
+          const sort_by = req.query.sort_by as string || 'asc';
+          const sort_field = req.query.sort_field as string || 'id';
     
-        const parsedPage = parseInt(page as string) || 1;
-        const parsedLimit = parseInt(limit as string) || submissionCount.count;
-        const token = req.headers.authorization?.split(' ')[1];
-  
-        if (!token) {
-          return res.status(401).json({ error: 'No token provided' });
-        }
-        // Verifikasi token dan ekstrak payload
-        const decoded = jwt.verify(token, 'your_secret_key') as { role: string };
-  
-        // Mendapatkan position dari payload token
-        const role = decoded.role;
+          const submissionCount = await LeaveSubmission.findAndCountAll();
     
-        // Validasi sort_by dan sort_field
-        const validSortBy = ['asc', 'desc'];
-        const isValidSortBy = validSortBy.includes(sort_by as string);
-        const validSortFields = [
-          'id', 'name', 'submissionDate', 'telephone', 'emergencyCall',
-          'position', 'department', 'startDate', 'endDate', 'totalDays',
-          'leaveType', 'description', 'leaveAllowance', 'status', 'approver'
-        ];
-        const isValidSortField = validSortFields.includes(sort_field);
+          const parsedPage = parseInt(page as string) || 1;
+          const parsedLimit = parseInt(limit as string) || submissionCount.count;
+          const token = req.headers.authorization?.split(' ')[1];
     
-        if (!isValidSortBy || !isValidSortField) {
-          return res.status(400).json({ error: 'Invalid sort_by or sort_field' });
-        }
-    
-        const offset = (parsedPage - 1) * parsedLimit;
-    
-        // Membuat objek pengaturan untuk pengambilan data
-        const options: FindAndCountOptions = {
-          where: {
-            is_deleted: 0
-          },
-          limit: parsedLimit,
-          offset: offset,
-          order: [[sort_field, sort_by]],
-          include: [
-            {
-              model: User,
-              attributes: ['name', 'position', 'department', 'telephone']
-            },
-            {
-              model: LeaveType,
-              attributes: ['type']
-            },
-            {
-              model: LeaveAllowance,
-              attributes: ['total_days']
-            },
-            {
-              model: User,
-              as: 'Approver', 
-              attributes: ['name'],
-            },
-          ]
-        };
-    
-        // Menambahkan kondisi where berdasarkan status jika status tersedia
-        if (status && typeof status === 'string') {
-          // Memisahkan nilai status yang dipisahkan oleh koma menjadi array
-          const statusArray = status.split(',');
-          
-          // Menggunakan operator "in" untuk mencocokkan status dengan nilai dalam array
-          options.where = { status: { [Op.in]: statusArray } };
-        }
-
-        if (leave_type_id && typeof leave_type_id === 'string') {
-          const leaveTypeArray = leave_type_id.split(',');
-          
-          options.where = { leave_type_id: { [Op.in]: leaveTypeArray } };
-        }
-
-        if (role === 'hr') {
-          if (user_id && typeof user_id === 'string') {
-            const userIdArray = user_id.split(',');
-            
-            options.where = { user_id: { [Op.in]: userIdArray } };
+          if (!token) {
+            return res.status(401).json({ error: 'No token provided' });
           }
-        }
+          // Verifikasi token dan ekstrak payload
+          const decoded = jwt.verify(token, 'your_secret_key') as { role: string };
     
-        // Mengambil semua data LeaveSubmission sesuai dengan pengaturan options
-        const { rows, count } = await LeaveSubmission.findAndCountAll(options);
-        // const submission = await LeaveSubmission.findAndCountAll(options);
-
-      // Membuat array baru hanya dengan nilai-nilai yang diinginkan
-        const submissions = rows.map((submission: any) => {
-          // Mengonversi tanggal ke string ISO 8601 dan mengambil bagian tanggal saja
-          // const formattedDate = submission.created_at ? new Date (submission.created_at).toISOString().slice(0, 10) : null;
-          const formattedDate = submission.created_at ? format(new Date(submission.created_at), 'yyyy-MM-dd') : null;
-        
-          return {
-            id: submission.id,
-            name: submission.User ? submission.User.name : null,
-            submissionDate: formattedDate, // Menggunakan tanggal yang sudah diformat
-            telephone: submission.User ? submission.User.telephone : null,
-            emergencyCall: submission.emergency_call,
-            position: submission.User ? submission.User.position : null,
-            department: submission.User ? submission.User.department : null,
-            startDate: submission.start_date,
-            endDate: submission.end_date,
-            totalDays: submission.total_days,
-            leaveType: submission.LeaveType ? submission.LeaveType.type : null,
-            description: submission.description,
-            leaveAllowance: submission.LeaveAllowance ? submission.LeaveAllowance.total_days : null,
-            status: submission.status,
-            approver: submission.Approver ? submission.Approver.name : null,
-            attachment: submission.attachment,
+          // Mendapatkan position dari payload token
+          const role = decoded.role;
+    
+          // Validasi sort_by dan sort_field
+          const validSortBy = ['asc', 'desc'];
+          const isValidSortBy = validSortBy.includes(sort_by as string);
+          const validSortFields = [
+            'id', 'name', 'submissionDate', 'telephone', 'emergencyCall',
+            'position', 'department', 'startDate', 'endDate', 'totalDays',
+            'leaveType', 'description', 'leaveAllowance', 'status', 'approver'
+          ];
+          const isValidSortField = validSortFields.includes(sort_field);
+    
+          if (!isValidSortBy || !isValidSortField) {
+            return res.status(400).json({ error: 'Invalid sort_by or sort_field' });
+          }
+    
+          const offset = (parsedPage - 1) * parsedLimit;
+    
+          // Membuat objek pengaturan untuk pengambilan data
+          const options: FindAndCountOptions = {
+            where: {
+              is_deleted: 0
+            },
+            limit: parsedLimit,
+            offset: offset,
+            order: [[sort_field, sort_by]],
+            include: [
+              {
+                model: User,
+                attributes: ['name', 'position', 'department', 'telephone']
+              },
+              {
+                model: LeaveType,
+                attributes: ['type']
+              },
+              {
+                model: LeaveAllowance,
+                attributes: ['total_days']
+              },
+              {
+                model: User,
+                as: 'Approver', 
+                attributes: ['name'],
+              },
+            ]
           };
-        });
-        res.status(200).json({
-          count,
-          submissions,
-        });
-      } catch (error) {
-        // Menangani kesalahan jika terjadi
-        console.error('Error while fetching submissions:', error);
-        res.status(500).json({ error: 'Unable to fetch submissions' });
-      }
+    
+          // Menambahkan kondisi where berdasarkan status jika status tersedia
+          if (status && typeof status === 'string') {
+            const statusArray = status.split(',');
+            options.where = {
+              ...options.where,
+              status: { [Op.in]: statusArray }
+            };
+          }
+    
+          if (leave_type_id && typeof leave_type_id === 'string') {
+            const leaveTypeArray = leave_type_id.split(',');
+            options.where = {
+              ...options.where,
+              leave_type_id: { [Op.in]: leaveTypeArray }
+            };
+          }
+    
+          if (role === 'hr') {
+            if (user_id && typeof user_id === 'string') {
+              const userIdArray = user_id.split(',');
+              options.where = {
+                ...options.where,
+                user_id: { [Op.in]: userIdArray }
+              };
+            }
+          }
+    
+          // Mengambil semua data LeaveSubmission sesuai dengan pengaturan options
+          const { rows, count } = await LeaveSubmission.findAndCountAll(options);
+    
+          // Membuat array baru hanya dengan nilai-nilai yang diinginkan
+          const submissions = rows.map((submission: any) => {
+            const formattedDate = submission.created_at ? format(new Date(submission.created_at), 'yyyy-MM-dd') : null;
+            
+            return {
+              id: submission.id,
+              name: submission.User ? submission.User.name : null,
+              submissionDate: formattedDate,
+              telephone: submission.User ? submission.User.telephone : null,
+              emergencyCall: submission.emergency_call,
+              position: submission.User ? submission.User.position : null,
+              department: submission.User ? submission.User.department : null,
+              startDate: submission.start_date,
+              endDate: submission.end_date,
+              totalDays: submission.total_days,
+              leaveType: submission.LeaveType ? submission.LeaveType.type : null,
+              description: submission.description,
+              leaveAllowance: submission.LeaveAllowance ? submission.LeaveAllowance.total_days : null,
+              status: submission.status,
+              approver: submission.Approver ? submission.Approver.name : null,
+              attachment: submission.attachment,
+            };
+          });
+    
+          res.status(200).json({
+            count,
+            submissions,
+          });
+        } catch (error) {
+          console.error('Error while fetching submissions:', error);
+          res.status(500).json({ error: 'Unable to fetch submissions' });
+        }
     },
 
     getSubmissionById: async (req: Request, res: Response) => {
@@ -262,12 +265,12 @@ const leaveSubmissionController = {
         };
 
         if (status && typeof status === 'string') {
-          // Memisahkan nilai status yang dipisahkan oleh koma menjadi array
-          const statusArray = status.split(',');
-          
-          // Menggunakan operator "in" untuk mencocokkan status dengan nilai dalam array
-          options.where = { status: { [Op.in]: statusArray } };
-        }
+            const statusArray = status.split(',');
+            options.where = {
+              ...options.where,
+              status: { [Op.in]: statusArray }
+            };
+          }
     
         const submissions = await LeaveSubmission.findAll(options);
     
@@ -380,7 +383,7 @@ const leaveSubmissionController = {
     updateSubmission: async (req: Request, res: Response) => {
       try {
         const submissionId = req.params.id;
-        const { start_date, end_date, leave_type, emergency_call, description } = req.body;
+        const { start_date, end_date, leave_type, emergency_call, description, attachment } = req.body;
         const token = req.headers.authorization?.split(' ')[1];
     
         if (!token) {
@@ -429,8 +432,9 @@ const leaveSubmissionController = {
             emergency_call,
             description,
             updated_at: new Date(),
-            updated_by: user_id
-          },{ where: { id: submissionId, is_deleted: 0 } }
+            updated_by: user_id,
+            attachment: attachment
+          },{ where: { id: submissionId, is_deleted: 0, status: "Pending" } }
         );
     
         if (updateSubmission === 0) {
@@ -575,6 +579,8 @@ const leaveSubmissionController = {
       }
     },
 
+
+
     uploadAttachment: async (req: Request, res: Response) => {
       try {
         if (!req.file) {
@@ -586,6 +592,64 @@ const leaveSubmissionController = {
         console.error(error);
         return res.status(500).json({ error: 'Failed to upload file' });
       }
+    },
+
+    updateAttachment: async (req: Request, res: Response) => {
+        try {
+            const submissionId = req.params.id;
+    
+            // Temukan data submission berdasarkan ID
+            const submission = await LeaveSubmission.findOne({
+                where: {
+                  id: submissionId,
+                  is_deleted: 0
+                }
+            });
+    
+            if (!submission) {
+                return res.status(404).json({ error: 'Submission not found' });
+            }
+    
+            // Jika ada file baru di-upload
+            if (req.file) {
+                // Dapatkan path file lama jika ada
+                const oldFilePath = submission.attachment;
+    
+                // Hapus file lama jika ada
+                if (oldFilePath) {
+                    const oldFileFullPath = path.join(__dirname, '../../uploads', oldFilePath);
+                    fs.unlink(oldFileFullPath, (err: any) => {
+                        if (err) {
+                            console.error('Error while deleting old file:', err);
+                        }
+                    });
+                }
+    
+                return res.status(200).json({ message: 'Attachment updated successfully', filename: req.file.filename });
+            } else {
+                return res.status(400).json({ error: 'No file uploaded' });
+            }
+        } catch (error) {
+            console.error('Error while updating attachment:', error);
+            return res.status(500).json({ error: 'Failed to update attachment' });
+        }
+    },
+
+    getAttachment: async (req: Request, res: Response) => {
+        try {
+            const { filename } = req.params;
+            const filePath = path.join(__dirname, '../../uploads/', filename);
+      
+            res.sendFile(filePath, (err) => {
+              if (err) {
+                console.error('Error while sending file:', err);
+                res.status(404).json({ error: 'File not found' });
+              }
+            });
+        } catch (error) {
+            console.error('Error while fetching attachment:', error);
+            res.status(500).json({ error: 'Unable to fetch attachment' });
+        }
     },
 
     
@@ -686,7 +750,7 @@ const leaveSubmissionController = {
             submissions,
           });
         } else {
-          res.status(404).json({ error: 'Submissions not found' });
+          res.status(404).json({ error: 'Submissions not found',});
         }
       } catch (error) {
         console.error('Error while fetching submissions:', error);
@@ -716,17 +780,10 @@ const leaveSubmissionController = {
     
         const offset = (parsedPage - 1) * parsedLimit;
     
-        const today = new Date();
-        const startOfToday = startOfDay(today);
-        const endOfToday = endOfDay(today);
-    
         const options: FindOptions = {
           where: {
             is_deleted: 0,
             status: 'Pending',
-            created_at: {
-              [Op.between]: [startOfToday, endOfToday],
-            },
           },
           limit: parsedLimit,
           offset: offset,
@@ -795,6 +852,15 @@ const leaveSubmissionController = {
         const { page, limit } = req.query;
         const sort_by = req.query.sort_by as string || 'asc';
         const sort_field = req.query.sort_field as string || 'id';
+        const token = req.headers.authorization?.split(' ')[1];
+
+        if (!token) {
+            return res.status(401).json({ error: 'No token provided' });
+        }
+
+        const decoded = jwt.verify(token, 'your_secret_key') as { userId: number };
+        const user_id = decoded.userId
+
     
         const submisssionCount = await LeaveSubmission.findAndCountAll({ where: { is_deleted: 0 } });
     
@@ -812,17 +878,11 @@ const leaveSubmissionController = {
     
         const offset = (parsedPage - 1) * parsedLimit;
     
-        const today = new Date();
-        const startOfToday = startOfDay(today);
-        const endOfToday = endOfDay(today);
-    
         const options: FindOptions = {
           where: {
             is_deleted: 0,
             status: 'Diterima',
-            created_at: {
-              [Op.between]: [startOfToday, endOfToday],
-            },
+            user_id: user_id
           },
           limit: parsedLimit,
           offset: offset,
@@ -891,6 +951,15 @@ const leaveSubmissionController = {
         const { page, limit } = req.query;
         const sort_by = req.query.sort_by as string || 'asc';
         const sort_field = req.query.sort_field as string || 'id';
+        const token = req.headers.authorization?.split(' ')[1];
+
+        if (!token) {
+            return res.status(401).json({ error: 'No token provided' });
+        }
+
+        const decoded = jwt.verify(token, 'your_secret_key') as { userId: number };
+        const user_id = decoded.userId
+
     
         const submisssionCount = await LeaveSubmission.findAndCountAll({ where: { is_deleted: 0 } });
     
@@ -908,17 +977,11 @@ const leaveSubmissionController = {
     
         const offset = (parsedPage - 1) * parsedLimit;
     
-        const today = new Date();
-        const startOfToday = startOfDay(today);
-        const endOfToday = endOfDay(today);
-    
         const options: FindOptions = {
           where: {
             is_deleted: 0,
             status: 'Ditolak',
-            created_at: {
-              [Op.between]: [startOfToday, endOfToday],
-            },
+            user_id: user_id
           },
           limit: parsedLimit,
           offset: offset,

@@ -1,12 +1,25 @@
 import * as cron from 'cron';
 import User from '../db/models/userModel'; 
 import LeaveAllowance from '../db/models/leaveAllowanceModel';
+import { Op } from "sequelize";
 
 
-const job = new cron.CronJob('0 0 0 1 1 *', async () => {
+const job = new cron.CronJob('0 0 1 1 *', async () => {
     try {
         const usersWithLeaveAllowance = await User.findAll({
-            include: [LeaveAllowance], 
+            where: {
+                role: {
+                    [Op.ne]: 'owner'
+                },
+                is_deleted: 0
+              },
+            include: [
+                {
+                  model: LeaveAllowance,
+                  as: 'leaveAllowance',
+                  attributes: ['total_days']
+                }
+            ],
         });
 
         for (const user of usersWithLeaveAllowance) {
@@ -33,10 +46,11 @@ const job = new cron.CronJob('0 0 0 1 1 *', async () => {
                 leaveAllowance = 0;
             }
 
-            await LeaveAllowance.update(
-                { total_days: leaveAllowance },
-                { where: { user_id: user.id } } 
-            );
+            console.log(`User ${user.id} - Leave Allowance: ${leaveAllowance}`);
+            // await LeaveAllowance.update(
+            //     { total_days: leaveAllowance },
+            //     { where: { user_id: user.id } } 
+            // );
         }
 
         console.log('Sisa cuti tahunan berhasil diperbarui');
