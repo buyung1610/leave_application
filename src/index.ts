@@ -24,9 +24,6 @@ app.use('/users', userRoutes);
 app.use('/submissions', submissionRoutes)
 app.use('/leave-types', leaveType)
 
-app.get('/api', (req, res) => {
-  res.json({ message: 'Ini adalah response dari API' });
-});
 
 
 const ip = process.env.IP || '0,0,0,0';
