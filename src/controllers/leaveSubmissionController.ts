@@ -9,6 +9,7 @@ import LeaveType from "../db/models/leaveTypeModel";
 import { format } from "date-fns";
 import path from "path";
 import fs from 'fs';
+import dotenv from 'dotenv'
 
 const leaveSubmissionController = {
     getAllSubmission: async (req: Request, res: Response) => {
@@ -665,7 +666,12 @@ const leaveSubmissionController = {
     getAttachment: async (req: Request, res: Response) => {
         try {
             const { filename } = req.params;
-            const filePath = path.join(__dirname, '../../uploads/', filename);
+
+            if (!process.env.UPLOAD) {
+              return res.status(500).json({ error: 'UPLOAD directory is not defined in environment variables' });
+            }
+            
+            const filePath = path.join(__dirname, process.env.UPLOAD, filename);
       
             res.sendFile(filePath, (err) => {
               if (err) {
