@@ -3,7 +3,7 @@ import LeaveSubmission from "../db/models/leaveSubmissionModel";
 import LeaveAllowance from "../db/models/leaveAllowanceModel";
 import jwt from "jsonwebtoken"
 import { validationResult } from "express-validator";
-import { FindAndCountOptions, FindOptions, Op, where } from "sequelize";
+import { FindAndCountOptions, FindOptions, Includeable, Op, where } from "sequelize";
 import User from "../db/models/userModel";
 import LeaveType from "../db/models/leaveTypeModel";
 import { format } from "date-fns";
@@ -59,7 +59,7 @@ const leaveSubmissionController = {
             include: [
               {
                 model: User,
-                attributes: ['name', 'position', 'department', 'telephone']
+                attributes: ['name', 'position', 'department', 'telephone', 'role']
               },
               {
                 model: LeaveType,
@@ -101,6 +101,33 @@ const leaveSubmissionController = {
                 ...options.where,
                 user_id: { [Op.in]: userIdArray }
               };
+            }
+          }
+
+          if (role === 'hr') {
+            if (user_id && typeof user_id === 'string') {
+                const userIdArray = user_id.split(',');
+                options.where = {
+                    ...options.where,
+                    user_id: { [Op.in]: userIdArray }
+                };
+            }
+
+            if (status === 'pending') {
+                // Menambahkan kondisi where pada include User
+                if (Array.isArray(options.include)) {
+                    const userInclude = options.include.find(
+                        (include): include is Includeable & { model: typeof User, where?: any } =>
+                            typeof include === 'object' && 'model' in include && include.model === User
+                    );
+
+                    if (userInclude) {
+                        userInclude.where = {
+                            ...userInclude.where,
+                            role: { [Op.ne]: 'hr' }
+                        };
+                    }
+                }
             }
           }
     
