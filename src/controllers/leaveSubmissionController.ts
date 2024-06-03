@@ -114,7 +114,7 @@ const leaveSubmissionController = {
                 };
             }
 
-            if (status === 'pending') {
+            if (status === 'pending' || 'Pending') {
                 // Menambahkan kondisi where pada include User
                 if (Array.isArray(options.include)) {
                     const userInclude = options.include.find(
