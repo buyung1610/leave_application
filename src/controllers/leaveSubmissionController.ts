@@ -3,18 +3,21 @@ import LeaveSubmission from "../db/models/leaveSubmissionModel";
 import LeaveAllowance from "../db/models/leaveAllowanceModel";
 import jwt from "jsonwebtoken"
 import { validationResult } from "express-validator";
-import { FindAndCountOptions, FindOptions, Includeable, Op, where } from "sequelize";
+import { FindAndCountOptions, FindOptions, Includeable, Op, Sequelize, where } from "sequelize";
 import User from "../db/models/userModel";
 import LeaveType from "../db/models/leaveTypeModel";
 import { format } from "date-fns";
 import path from "path";
 import fs from 'fs';
 import dotenv from 'dotenv'
+import sequelize from "../config/dbConnection";
+// import sequelize from "sequelize/types/sequelize";
+
 
 const leaveSubmissionController = {
     getAllSubmission: async (req: Request, res: Response) => {
         try {
-          const { page, limit, status, leave_type_id, user_id } = req.query;
+          const { page, limit, status, leave_type_id, user_id, start_date, end_date } = req.query;
           const sort_by = req.query.sort_by as string || 'asc';
           const sort_field = req.query.sort_field as string || 'id';
     
@@ -130,6 +133,28 @@ const leaveSubmissionController = {
                     }
                 }
             }
+          }
+
+          if (start_date && end_date) {
+            // Ubah format tanggal dari req.query menjadi format yang sesuai untuk query database
+            const startDate = new Date(start_date as string);
+            const endDate = new Date(end_date as string);
+        
+            options.where = {
+                ...options.where,
+                [Op.or]: [
+                    {
+                        start_date: {
+                            [Op.between]: [startDate, endDate]
+                        }
+                    },
+                    {
+                        end_date: {
+                            [Op.between]: [startDate, endDate]
+                        }
+                    }
+                ]
+            };
           }
     
           // Mengambil semua data LeaveSubmission sesuai dengan pengaturan options

@@ -2,7 +2,6 @@ import { Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
 import User from "../db/models/userModel";
 import bcrypt from 'bcrypt'
-import { JwtPayload } from '../db/types';
 import { validationResult } from 'express-validator';
 
 import nodemailer from 'nodemailer';
@@ -116,7 +115,7 @@ const authController = {
               return;
           }
 
-          const resetToken = crypto.randomBytes(32).toString('hex');
+          const resetToken = crypto.randomInt(100000, 999999).toString();
           const resetTokenHash = await bcrypt.hash(resetToken, 10);
           user.resetToken = resetTokenHash;
           user.resetTokenExpires = new Date(Date.now() + 3600000); // 1 hour from now
@@ -131,11 +130,11 @@ const authController = {
           });
 
           const mailOptions = {
-              to: user.email,
-              from: process.env.EMAIL_USER,
-              subject: 'Password Reset',
-              text: `You are receiving this because you (or someone else) have requested the reset of the password for your account.\n\nPlease click on the following link, or paste this into your browser to complete the process:\n\nhttp://192.168.10.10:3000/reset/${resetToken}\n\nIf you did not request this, please ignore this email and your password will remain unchanged.\n`
-            };
+            to: user.email,
+            from: process.env.EMAIL_USER,
+            subject: 'Password Reset Token',
+            text: `Your password reset token is:\n\n${resetToken}\n\nIf you did not request this, please ignore this email and your password will remain unchanged.\n`
+          };
 
 
           await transporter.sendMail(mailOptions);

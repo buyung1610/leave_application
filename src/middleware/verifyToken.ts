@@ -1,7 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt, { TokenExpiredError } from 'jsonwebtoken';
 import User from '../db/models/userModel';
-import { JwtPayload } from '../db/types';
 
 export const verifyToken = async (req: Request, res: Response, next: NextFunction) => {
   try {

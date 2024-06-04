@@ -26,6 +26,7 @@ interface LeaveSubmissionAttributes {
 }
 
 class LeaveSubmission extends Model<LeaveSubmissionAttributes> implements LeaveSubmissionAttributes {
+  month: any;
   map(arg0: (submission: any) => { id: any; name: any; submissionDate: string | null; telephone: any; emergencyCall: any; position: any; department: any; startDate: any; endDate: any; totalDays: any; leaveType: any; description: any; leaveAllowance: any; status: any; approver: any; }) {
     throw new Error("Method not implemented.");
   }
