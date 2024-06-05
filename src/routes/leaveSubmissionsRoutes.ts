@@ -102,9 +102,8 @@ router.get("/login", verifyToken, submissionController.getSubmissionLogin);
 // Rute untuk menampilkan pengajuan cuti yang dikirim hari ini dengan status pending
 router.get("/permintaan-cuti", verifyToken, submissionController.permintaanCuti);
 
-router.get("/leave-history", verifyToken, submissionController.getLeaveHistory);
-router.get("/getMonthlyLeaveChart", verifyToken, submissionController.getMonthlyLeaveChart);
-
+router.get("/history-user", verifyToken, submissionController.getLeaveHistory);
+router.get("/history-month", verifyToken, submissionController.getMonthlyLeaveChart);
 
 // Rute untuk menampilkan pengajuan cuti karyawan
 router.get("/karyawan-cuti", verifyToken, submissionController.karyawanCuti);

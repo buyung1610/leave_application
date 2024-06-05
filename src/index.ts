@@ -9,7 +9,6 @@ import leaveType from './routes/leaveTypeRoutes'
 import './jobs/updateLeaveAllowance';
 import User from './db/models/userModel';
 import dotenv from 'dotenv'
-import leaveHistory from './routes/leaveHistory';
 
 
 const app = express();
@@ -24,8 +23,6 @@ app.use('/auth', authRoutes)
 app.use('/users', userRoutes);
 app.use('/submissions', submissionRoutes)
 app.use('/leave-types', leaveType)
-app.use('/leave-history', leaveHistory)
-
 
 
 const ip = process.env.IP || '0,0,0,0';
