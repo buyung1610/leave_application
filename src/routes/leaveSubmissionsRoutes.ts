@@ -103,6 +103,7 @@ router.get("/login", verifyToken, submissionController.getSubmissionLogin);
 router.get("/permintaan-cuti", verifyToken, submissionController.permintaanCuti);
 
 router.get("/history-user", verifyToken, submissionController.getLeaveHistory);
+router.get("/history-user-year", verifyToken, submissionController.getLeaveHistoryEveryYear);
 router.get("/history-month", verifyToken, submissionController.getMonthlyLeaveChart);
 
 // Rute untuk menampilkan pengajuan cuti karyawan

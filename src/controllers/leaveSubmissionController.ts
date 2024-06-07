@@ -11,6 +11,7 @@ import path from "path";
 import fs from 'fs';
 import dotenv from 'dotenv'
 import sequelize from "../config/dbConnection";
+import { count } from "console";
 // import sequelize from "sequelize/types/sequelize";
 
 
@@ -1118,174 +1119,296 @@ const leaveSubmissionController = {
 
 
 
-
-
-
     getLeaveHistory: async (req: Request, res: Response) => {
       try {
-          const { month, year, page, limit } = req.query;
+        const { month, year, page, limit } = req.query;
+        const sort_by = req.query.sort_by as string || 'asc';
+        const sort_field = req.query.sort_field as string || 'userId';
+    
+        // Validate query parameters
+        if (typeof month !== 'string' || typeof year !== 'string') {
+            return res.status(400).json({ error: 'Invalid query parameters' });
+        }
+    
+        const monthNum = parseInt(month); // Convert month to number
+        const yearNum = parseInt(year); // Convert year to number
+    
+        if (isNaN(monthNum) || isNaN(yearNum)) {
+            return res.status(400).json({ error: 'Invalid query parameters' });
+        }
+    
+        const startDate = new Date(yearNum, monthNum - 1, 1);
+        const endDate = new Date(yearNum, monthNum, 0);
+    
+        // Query leave submissions from the database
+        const leaveSubmissions: LeaveSubmission[] = await LeaveSubmission.findAll({
+          where: {
+              start_date: {
+                  [Op.between]: [startDate, endDate]
+              },
+              is_deleted: 0
+          },
+          include: [{
+              model: User,
+              where: {
+                  role: {
+                      [Op.not]: 'owner'
+                  }
+              }
+          }],
+        });
+    
+        // Processed users
+        const processedUsers: string[] = [];
+
+        // Object to store leave history for each user
+        const leaveHistory: { userId: number; name: string; data: number[] }[] = [];
+
+        leaveSubmissions.forEach((submission: LeaveSubmission) => {
+            const start = new Date(submission.start_date);
+            const end = new Date(submission.end_date);
+
+            const user = submission.User;
+
+            if (user) {
+                const userId = user.id;
+                const userName = user.name;
+
+                const status = submission.status?.toLowerCase() || 'pending';
+
+                // Check if the user already exists in leaveHistory
+                const existingUserIndex = leaveHistory.findIndex(entry => entry.userId === userId);
+                if (existingUserIndex !== -1) {
+                    // If exists, increment the corresponding status count
+                    switch (status) {
+                        case 'diterima':
+                            leaveHistory[existingUserIndex].data[0]++;
+                            break;
+                        case 'ditolak':
+                            leaveHistory[existingUserIndex].data[1]++;
+                            break;
+                        case 'pending':
+                            leaveHistory[existingUserIndex].data[2]++;
+                            break;
+                        default:
+                            break;
+                    }
+                } else {
+                    // If not, add a new entry for the user
+                    const newData: number[] = [0, 0, 0]; // [diterima, ditolak, pending]
+                    switch (status) {
+                        case 'diterima':
+                            newData[0]++;
+                            break;
+                        case 'ditolak':
+                            newData[1]++;
+                            break;
+                        case 'pending':
+                            newData[2]++;
+                            break;
+                        default:
+                            break;
+                    }
+                    leaveHistory.push({ userId, name: userName, data: newData });
+                }
+
+                // Mark user as processed
+                processedUsers.push(userName);
+            } else {
+                console.error('Invalid user data:', submission.User);
+            }
+        });
+
+        // Check users who didn't submit leave and add them to leaveHistory
+        const allUsers = await User.findAll();
+        allUsers.forEach(user => {
+            if (!processedUsers.includes(user.name)) {
+                leaveHistory.push({ userId: user.id, name: user.name, data: [0, 0, 0] });
+            }
+        });
+
+        const updatedLeaveHistory = leaveHistory.map(entry => ({
+          userId: entry.userId,
+          name: entry.name,
+          data: entry.data.map(val => val.toString()).join(',') // Convert numbers to strings and join with comma
+        }));
+    
+        // Sorting
+        if (typeof sort_field === 'string' && typeof sort_by === 'string') {
+          if (sort_field === 'userId') {
+              updatedLeaveHistory.sort((a, b) => {
+                  const aValue = Number(a[sort_field]);
+                  const bValue = Number(b[sort_field]);
+                  return sort_by === 'asc' ? aValue - bValue : bValue - aValue;
+              });
+          } else if (sort_field === 'data') {
+              updatedLeaveHistory.sort((a, b) => {
+                  const aValue = a[sort_field].split(',').reduce((acc, val) => acc + parseInt(val), 0); // Split and sum values in the array
+                  const bValue = b[sort_field].split(',').reduce((acc, val) => acc + parseInt(val), 0); // Split and sum values in the array
+                  return sort_by === 'asc' ? aValue - bValue : bValue - aValue;
+              });
+          } else {
+              console.error('Invalid sort field:', sort_field);
+          }
+        }
+    
+        // Pagination
+        const pageNum = page ? parseInt(page as string) : 1;
+        const limitNum = limit ? parseInt(limit as string) : leaveHistory.length;
+        const startIndex = (pageNum - 1) * limitNum;
+        const endIndex = startIndex + limitNum;
+        const paginatedLeaveHistory = updatedLeaveHistory.slice(startIndex, endIndex);
+    
+        res.status(200).json(paginatedLeaveHistory);
+      } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Unable to fetch leave history' });
+      }
+    },
+    
+    getLeaveHistoryEveryYear: async (req: Request, res: Response) => {
+      try {
+          const { year, page, limit } = req.query;
           const sort_by = req.query.sort_by as string || 'asc';
           const sort_field = req.query.sort_field as string || 'userId';
   
           // Validate query parameters
-          if (typeof month !== 'string' || typeof year !== 'string') {
+          if (typeof year !== 'string') {
               return res.status(400).json({ error: 'Invalid query parameters' });
           }
   
-          const monthNum = parseInt(month); // Konversi month menjadi number
-          const yearNum = parseInt(year); // Konversi year menjadi number
+          const yearNum = parseInt(year); // Convert year to number
   
-          if (isNaN(monthNum) || isNaN(yearNum)) {
+          if (isNaN(yearNum)) {
               return res.status(400).json({ error: 'Invalid query parameters' });
           }
   
-          const startDate = new Date(yearNum, monthNum - 1, 1);
-          const endDate = new Date(yearNum, monthNum, 0);
+          const startDate = new Date(yearNum, 0, 1); // January 1st of the given year
+          const endDate = new Date(yearNum, 11, 31); // December 31st of the given year
   
-          // Query pengajuan cuti dari database
+          // Query leave submissions from the database
           const leaveSubmissions: LeaveSubmission[] = await LeaveSubmission.findAll({
               where: {
-                  [Op.or]: [
-                      { start_date: { [Op.between]: [startDate, endDate] } }, // Pengecekan untuk cuti yang dimulai dan berakhir di dalam bulan yang diminta
-                      { start_date: { [Op.lt]: startDate }, end_date: { [Op.gte]: startDate } }, // Pengecekan untuk cuti yang dimulai sebelum bulan yang diminta dan berlanjut ke bulan tersebut
-                      { start_date: { [Op.lt]: endDate }, end_date: { [Op.gte]: endDate } } // Pengecekan untuk cuti yang dimulai di bulan yang diminta dan berlanjut ke bulan berikutnya
-                  ],
-                  is_deleted: 0,
-                  status: "diterima"
+                  start_date: {
+                      [Op.between]: [startDate, endDate]
+                  },
+                  is_deleted: 0
               },
-              include: [User] // Sertakan model User untuk mendapatkan informasi pengguna
+              include: [{
+                  model: User,
+                  where: {
+                      role: {
+                          [Op.not]: 'owner'
+                      }
+                  }
+              }]
           });
   
-          const calculateWorkingDays = (start: Date, end: Date): number => {
-              let totalDays = 0;
-              let currentDate = new Date(start);
-  
-              while (currentDate <= end) {
-                  const dayOfWeek = currentDate.getDay();
-                  if (dayOfWeek !== 0 && dayOfWeek !== 6) { // Exclude Sunday and Saturday
-                      totalDays++;
-                  }
-                  currentDate.setDate(currentDate.getDate() + 1);
-              }
-  
-              return totalDays;
-          };
-  
-          // Array untuk menyimpan total cuti setiap bulan untuk setiap karyawan
-          const leaveSummary: { userId: number; name: string; totalLeaveDays: number }[] = [];
-  
-          // Simpan daftar pengguna yang telah diproses
+          // Processed users
           const processedUsers: string[] = [];
   
+          // Object to store leave history for each user
+          const leaveHistory: { userId: number; name: string; data: number[] }[] = [];
+  
           leaveSubmissions.forEach((submission: LeaveSubmission) => {
-              const start = new Date(submission.start_date);
-              const end = new Date(submission.end_date);
+              const user = submission.User;
   
-              const user = submission.User; // Dapatkan objek pengguna dari relasi
-  
-              if (user) { // Pastikan objek pengguna ada
+              if (user) {
                   const userId = user.id;
                   const userName = user.name;
   
-                  let totalLeaveDays = 0;
+                  const status = submission.status?.toLowerCase() || 'pending';
   
-                  if (start < startDate && end > endDate) {
-                      totalLeaveDays = calculateWorkingDays(startDate, endDate);
-                  } else if (start < startDate && end <= endDate) {
-                      totalLeaveDays = calculateWorkingDays(startDate, end);
-                  } else if (start >= startDate && end > endDate) {
-                      totalLeaveDays = calculateWorkingDays(start, endDate);
-                  } else {
-                      totalLeaveDays = submission.total_days;
-                  }
-  
-                  // Cek apakah pengguna sudah ada dalam leaveSummary
-                  const existingUserIndex = leaveSummary.findIndex(summary => summary.name === userName);
+                  // Check if the user already exists in leaveHistory
+                  const existingUserIndex = leaveHistory.findIndex(entry => entry.userId === userId);
                   if (existingUserIndex !== -1) {
-                      // Jika sudah ada, tambahkan total cuti baru ke total cuti yang sudah ada
-                      leaveSummary[existingUserIndex].totalLeaveDays += totalLeaveDays;
+                      // If exists, increment the corresponding status count
+                      switch (status) {
+                          case 'diterima':
+                              leaveHistory[existingUserIndex].data[0]++;
+                              break;
+                          case 'ditolak':
+                              leaveHistory[existingUserIndex].data[1]++;
+                              break;
+                          case 'pending':
+                              leaveHistory[existingUserIndex].data[2]++;
+                              break;
+                          default:
+                              break;
+                      }
                   } else {
-                      // Jika belum ada, tambahkan informasi cuti baru sebagai objek baru dalam array
-                      leaveSummary.push({ userId, name: userName, totalLeaveDays });
+                      // If not, add a new entry for the user
+                      const newData: number[] = [0, 0, 0]; // [diterima, ditolak, pending]
+                      switch (status) {
+                          case 'diterima':
+                              newData[0]++;
+                              break;
+                          case 'ditolak':
+                              newData[1]++;
+                              break;
+                          case 'pending':
+                              newData[2]++;
+                              break;
+                          default:
+                              break;
+                      }
+                      leaveHistory.push({ userId, name: userName, data: newData });
                   }
   
-                  // Tandai pengguna telah diproses
+                  // Mark user as processed
                   processedUsers.push(userName);
               } else {
                   console.error('Invalid user data:', submission.User);
               }
           });
   
-          // Cek pengguna yang tidak memiliki cuti dan tambahkan ke leaveSummary
-          const allUsers = await User.findAll(); // Ambil semua pengguna dari database
+          // Check users who didn't submit leave and add them to leaveHistory
+          const allUsers = await User.findAll();
           allUsers.forEach(user => {
               if (!processedUsers.includes(user.name)) {
-                  leaveSummary.push({ userId: user.id, name: user.name, totalLeaveDays: 0 });
+                  leaveHistory.push({ userId: user.id, name: user.name, data: [0, 0, 0] });
               }
           });
   
+          const updatedLeaveHistory = leaveHistory.map(entry => ({
+              userId: entry.userId,
+              name: entry.name,
+              data: entry.data.map(val => val.toString()).join(',') // Convert numbers to strings and join with comma
+          }));
+  
           // Sorting
           if (typeof sort_field === 'string' && typeof sort_by === 'string') {
-            if (sort_field === 'userId' || sort_field === 'totalLeaveDays') {
-                leaveSummary.sort((a, b) => {
-                    if (sort_by === 'asc') {
-                        return a[sort_field] - b[sort_field];
-                    } else {
-                        return b[sort_field] - a[sort_field];
-                    }
+            if (sort_field === 'userId') {
+                updatedLeaveHistory.sort((a, b) => {
+                    const aValue = Number(a[sort_field]);
+                    const bValue = Number(b[sort_field]);
+                    return sort_by === 'asc' ? aValue - bValue : bValue - aValue;
+                });
+            } else if (sort_field === 'data') {
+                updatedLeaveHistory.sort((a, b) => {
+                    const aValue = a[sort_field].split(',').reduce((acc, val) => acc + parseInt(val), 0); // Split and sum values in the array
+                    const bValue = b[sort_field].split(',').reduce((acc, val) => acc + parseInt(val), 0); // Split and sum values in the array
+                    return sort_by === 'asc' ? aValue - bValue : bValue - aValue;
                 });
             } else {
                 console.error('Invalid sort field:', sort_field);
             }
-          }
+        }
   
           // Pagination
           const pageNum = page ? parseInt(page as string) : 1;
-          const limitNum = limit ? parseInt(limit as string) : leaveSummary.length;
+          const limitNum = limit ? parseInt(limit as string) : leaveHistory.length;
           const startIndex = (pageNum - 1) * limitNum;
           const endIndex = startIndex + limitNum;
-          const paginatedLeaveSummary = leaveSummary.slice(startIndex, endIndex);
+          const paginatedLeaveHistory = updatedLeaveHistory.slice(startIndex, endIndex);
   
-          res.status(200).json(paginatedLeaveSummary);
+          res.status(200).json(paginatedLeaveHistory);
       } catch (error) {
           console.error(error);
-          res.status(500).json({ error: 'Unable to fetch total leave days' });
+          res.status(500).json({ error: 'Unable to fetch leave history' });
       }
     },
-    //   try {
-    //     const { page, limit, month, year } = req.query;
-    //     const sort_by = req.query.sort_by as string || 'asc';
-    //     const sort_field = req.query.sort_field as string || 'id';
-    
-    //     const submissionCount = await LeaveSubmission.findAndCountAll();
-    
-    //     const parsedPage = parseInt(page as string) || 1;
-    //     const parsedLimit = parseInt(limit as string) || submissionCount.count;
-    
-    //     const offset = (parsedPage - 1) * parsedLimit;
-    
-    //     const startDate = new Date(Number(year), Number(month) - 1, 1);
-    //     const endDate = new Date(Number(year), Number(month), 0);
-    
-    //     const leaveCounts = await LeaveSubmission.findAndCountAll({
-    //       where: {
-    //         start_date: {
-    //           [Op.between]: [startDate, endDate]
-    //         },
-    //         is_deleted: 0,
-    //         status: 'diterima'
-    //       },
-    //       order: [[sort_field, sort_by]],
-    //       limit: parsedLimit,
-    //       offset: offset
-    //     });
-    
-    //     return res.status(200).json({ leaveCounts });
-    //   } catch (error) {
-    //     console.error(error);
-    //     return res.status(500).json({ error: 'Unable to fetch user leave counts' });
-    //   }
-    // },
+  
     
     getMonthlyLeaveChart: async (req: Request, res: Response) => {
       try {
@@ -1293,7 +1416,7 @@ const leaveSubmissionController = {
         const sort_by = req.query.sort_by as string || 'asc';
         const sort_field = req.query.sort_field as string || 'month';
     
-        // Validasi query parameter
+        // Validate query parameters
         if (typeof year !== 'string') {
           return res.status(400).json({ error: 'Invalid query parameters' });
         }
@@ -1304,62 +1427,35 @@ const leaveSubmissionController = {
           return res.status(400).json({ error: 'Invalid query parameters' });
         }
     
-        const calculateWorkingDays = (start: Date, end: Date): number => {
-          let totalDays = 0;
-          let currentDate = new Date(start);
-    
-          while (currentDate <= end) {
-            const dayOfWeek = currentDate.getDay();
-            if (dayOfWeek !== 0 && dayOfWeek !== 6) { // 0 = Minggu, 6 = Sabtu
-              totalDays++;
-            } else if (currentDate.getDate() === 31) {
-                totalDays++;
-            }
-            currentDate.setDate(currentDate.getDate() + 1);
-          }
-    
-          return totalDays;
-        };
-    
-        // Array untuk menyimpan total cuti setiap bulan
-        const monthlyLeaveSummary = Array(12).fill(0);
+        const statuses = ["diterima", "ditolak", "pending"];
+        const monthlyLeaveSummary: { [key: string]: number }[] = Array(12).fill(null).map(() => ({
+          diterima: 0,
+          ditolak: 0,
+          pending: 0
+        }));
     
         for (let month = 0; month < 12; month++) {
           const startDate = new Date(yearNum, month, 1);
           const endDate = new Date(yearNum, month + 1, 1);
           endDate.setDate(endDate.getDate() - 1);
     
-          // Query pengajuan cuti dari database
+          // Query leave submissions from the database
           const leaveSubmissions: LeaveSubmission[] = await LeaveSubmission.findAll({
             where: {
-              [Op.or]: [
-                { start_date: { [Op.between]: [startDate, endDate] } },
-                { start_date: { [Op.lt]: startDate }, end_date: { [Op.gte]: startDate } },
-                { start_date: { [Op.lt]: endDate }, end_date: { [Op.gte]: endDate } }
-              ],
-              is_deleted: 0,
-              status: "diterima"
+              start_date: {
+                [Op.between]: [startDate, endDate]
+              },
+              is_deleted: 0
             }
           });
     
-          let totalLeaveDays = 0;
-    
+          // Count leave submissions by their status
           leaveSubmissions.forEach((submission: LeaveSubmission) => {
-            const start = new Date(submission.start_date);
-            const end = new Date(submission.end_date);
-    
-            if (start < startDate && end > endDate) {
-              totalLeaveDays += calculateWorkingDays(startDate, endDate);
-            } else if (start < startDate && end <= endDate) {
-              totalLeaveDays += calculateWorkingDays(startDate, end);
-            } else if (start >= startDate && end > endDate) {
-              totalLeaveDays += calculateWorkingDays(start, endDate);
-            } else {
-              totalLeaveDays += calculateWorkingDays(start, end);
+            const normalizedStatus = submission.status?.toLowerCase();
+            if (normalizedStatus && statuses.includes(normalizedStatus)) {
+              monthlyLeaveSummary[month][normalizedStatus]++;
             }
           });
-    
-          monthlyLeaveSummary[month] = totalLeaveDays;
         }
     
         const monthNames = [
@@ -1369,7 +1465,11 @@ const leaveSubmissionController = {
     
         let response = monthNames.map((month, index) => ({
           month,
-          totalLeaveDays: monthlyLeaveSummary[index]
+          data: [
+            monthlyLeaveSummary[index].diterima,
+            monthlyLeaveSummary[index].ditolak,
+            monthlyLeaveSummary[index].pending
+          ].join(', ')
         }));
     
         // Sorting
@@ -1380,12 +1480,6 @@ const leaveSubmissionController = {
                 return monthNames.indexOf(a.month) - monthNames.indexOf(b.month);
               } else {
                 return monthNames.indexOf(b.month) - monthNames.indexOf(a.month);
-              }
-            } else if (sort_field === 'totalLeaveDays') {
-              if (sort_by === 'asc') {
-                return a.totalLeaveDays - b.totalLeaveDays;
-              } else {
-                return b.totalLeaveDays - a.totalLeaveDays;
               }
             }
             return 0;
@@ -1408,9 +1502,13 @@ const leaveSubmissionController = {
         });
       } catch (error) {
         console.error(error);
-        res.status(500).json({ error: 'Unable to fetch total leave days' });
+        res.status(500).json({ error: 'Unable to fetch leave submissions' });
       }
     },
+    
+    
+    
+    
 } 
 
 export default leaveSubmissionController
