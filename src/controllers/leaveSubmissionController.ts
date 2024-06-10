@@ -1167,6 +1167,11 @@ const leaveSubmissionController = {
     getLeaveStats: async (req: Request, res: Response) => {
       try {
         const { month, year } = req.query;
+
+        if (typeof month !== 'string' || !year) {
+          return res.status(400).json({ error: 'Invalid month or year' });
+        }
+
         const token = req.headers.authorization?.split(' ')[1];
     
         if (!token) {
@@ -1182,8 +1187,14 @@ const leaveSubmissionController = {
         // }
     
         // Validasi bulan dan tahun
-        const startDate = new Date(`${year}-${month}-01`);
-        const endDate = new Date(startDate.getFullYear(), startDate.getMonth() + 1, 1);
+        let startDate, endDate;
+        if (parseInt(month) === 0) {
+          startDate = new Date(`${year}-01-01`);
+          endDate = new Date(`${year}-12-31`);
+        } else {
+          startDate = new Date(`${year}-${month}-01`);
+          endDate = new Date(startDate.getFullYear(), startDate.getMonth() + 1, 1);
+        }
     
         const leaveStats = await User.findAll({
           attributes: [
@@ -1238,7 +1249,6 @@ const leaveSubmissionController = {
           cutiDiterima: stat.get('cuti_diterima'),
           cutiDitolak: stat.get('cuti_ditolak'),
           cutiPending: stat.get('cuti_pending'),
-          sisaCuti: 0
         }));
     
         res.status(200).json({
