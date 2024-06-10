@@ -5,6 +5,7 @@ interface LeaveTypeAttributes {
   id?: number;
   type: string;
   is_emergency: number;
+  total_days: number | null;
   created_at: Date | null;
   updated_at: Date | null;
   deleted_at: Date | null;
@@ -18,6 +19,7 @@ class LeaveType extends Model<LeaveTypeAttributes> implements LeaveTypeAttribute
   public id!: number;
   public type!: string;
   public is_emergency!: number;
+  public total_days!: number | null;
   public created_at!: Date | null;
   public updated_at!: Date | null;
   public deleted_at!: Date | null;
@@ -42,6 +44,10 @@ LeaveType.init(
     is_emergency: {
       type: DataTypes.TINYINT,
       allowNull: false,
+    },
+    total_days: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
     },
     created_at: {
       type: DataTypes.DATE,

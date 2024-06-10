@@ -212,7 +212,7 @@ const userController = {
   updateUserData: async (req: Request, res: Response) => {
     try {
       const userIdParams = req.params.id;
-      const { name, email, position, department, telephone, join_date, gender, role } = req.body;
+      const { name, email, position, department, telephone, join_date, gender, role, leave_allowance } = req.body;
       const token = req.headers.authorization?.split(' ')[1];
 
       if (!token) {
@@ -260,28 +260,40 @@ const userController = {
       const diffMonths = diffYears * 12 + (currentDate.getMonth() - joinDate.getMonth());
 
       let leaveAllowance = 0;
-      if (diffMonths >= 72) {
-        leaveAllowance = 17;
-      } else if (diffMonths >= 60) {
-        leaveAllowance = 16;
-      } else if (diffMonths >= 48) {
-        leaveAllowance = 15;
-      } else if (diffMonths >= 36) {
-        leaveAllowance = 14;
-      } else if (diffMonths >= 24) {
-        leaveAllowance = 13;
-      } else if (diffMonths >= 12) {
-        leaveAllowance = 12;
+
+      if ( leave_allowance === 0 ){
+        leaveAllowance = 0
+      } else if ( !leave_allowance || typeof leave_allowance !== 'number' ){
+        if (diffMonths >= 72) {
+          leaveAllowance = 17;
+        } else if (diffMonths >= 60) {
+          leaveAllowance = 16;
+        } else if (diffMonths >= 48) {
+          leaveAllowance = 15;
+        } else if (diffMonths >= 36) {
+          leaveAllowance = 14;
+        } else if (diffMonths >= 24) {
+          leaveAllowance = 13;
+        } else if (diffMonths >= 12) {
+          leaveAllowance = 12;
+        } else {
+          leaveAllowance = 0;
+        }
       } else {
-        leaveAllowance = 0;
+        leaveAllowance = leave_allowance
       }
+      
 
       // Simpan data jatah cuti untuk pengguna yang diperbarui
-      const newLeaveAllowance = await LeaveAllowance.update({
+      const [newLeaveAllowance] = await LeaveAllowance.update({
         total_days: leaveAllowance,
         updated_at: new Date(),
         updated_by: user_id,
-      },{ where: { id: userIdParams } });
+      },{ where: { user_id: userIdParams } });
+
+      if (newLeaveAllowance === 0) {
+        return res.status(404).json({ error: 'leave allowance not found' });
+      }
 
       res.status(200).json({ message: 'User data updated successfully' });
     } catch (error) {

@@ -12,6 +12,7 @@ import fs from 'fs';
 import dotenv from 'dotenv'
 import sequelize from "../config/dbConnection";
 import { count } from "console";
+import leaveTypeController from "./leaveTypeController";
 // import sequelize from "sequelize/types/sequelize";
 
 
@@ -387,13 +388,6 @@ const leaveSubmissionController = {
         const decoded = jwt.verify(token, 'your_secret_key') as { userId: number };
         const user_id = decoded.userId;
 
-        if (leave_type === 1 || leave_type === "1") {
-          const leaveAllowance = await LeaveAllowance.findOne({ where: { user_id: user_id, is_deleted: 0 } });
-          if (!leaveAllowance || leaveAllowance.total_days === 0) {
-              return res.status(401).json({ error: 'Jatah cuti tidak cukup' });
-          }
-        }
-        
         const startDate = new Date(start_date);
         const endDate = new Date(end_date);
         const calculateWorkingDays = (start: Date, end: Date): number => {
@@ -412,7 +406,31 @@ const leaveSubmissionController = {
         };
     
         const numberOfDays = calculateWorkingDays(startDate, endDate);
-        
+        const leaveType = await LeaveType.findOne({ where: { id: leave_type, is_deleted: 0 }})
+        const leaveAllowance = await LeaveAllowance.findOne({ where: { user_id: user_id, is_deleted: 0 } });
+
+        if (!leaveType) {
+          return res.status(404).json({ error: 'leave type not found' });
+        }
+
+        if (!leaveAllowance) {
+          return res.status(404).json({ error: 'leave allowance not found' });
+        }
+
+        if (leave_type === 1 || leave_type === "1") {
+          if (leaveAllowance.total_days === null || leaveAllowance.total_days === 0 || leaveAllowance.total_days < numberOfDays) {
+            return res.status(401).json({ error: 'Jatah cuti tidak cukup' });
+          }
+        }        
+
+        if (leaveType?.is_emergency === 1) {
+          const leaveTypeTotalDays = leaveType.total_days ?? 0;
+          const extraDay = numberOfDays - leaveTypeTotalDays;
+          if (leaveAllowance.total_days === null || leaveAllowance.total_days === 0 || leaveAllowance.total_days < extraDay) {
+            return res.status(401).json({ error: 'Jatah cuti tidak cukup' });
+          }
+        }
+
         const leaveSubmission = await LeaveSubmission.create({
           user_id: user_id,
           leave_type_id: leave_type,
@@ -470,11 +488,24 @@ const leaveSubmissionController = {
         };
     
         const numberOfDays = calculateWorkingDays(startDate, endDate);
+        const leaveType = await LeaveType.findOne({ where: { id: leave_type, is_deleted: 0 }})
+        const leaveAllowance = await LeaveAllowance.findOne({ where: { user_id: user_id, is_deleted: 0 } });
     
-        if (leave_type === 1) {
-          const leaveAllowance = await LeaveAllowance.findOne({ where: { user_id: user_id, is_deleted: 0 } });
-          if (!leaveAllowance || leaveAllowance.total_days === 0) {
-              return res.status(401).json({ error: 'Jatah cuti tidak cukup' });
+        if (!leaveAllowance) {
+          return res.status(404).json({ error: 'leave allowance not found' });
+        }
+
+        if (leave_type === 1 || leave_type === "1") {
+          if (leaveAllowance.total_days === null || leaveAllowance.total_days === 0 || leaveAllowance.total_days < numberOfDays) {
+            return res.status(401).json({ error: 'Jatah cuti tidak cukup' });
+          }
+        }        
+
+        if (leaveType?.is_emergency === 1) {
+          const leaveTypeTotalDays = leaveType.total_days ?? 0;
+          const extraDay = numberOfDays - leaveTypeTotalDays;
+          if (leaveAllowance.total_days === null || leaveAllowance.total_days === 0 || leaveAllowance.total_days < extraDay) {
+            return res.status(401).json({ error: 'Jatah cuti tidak cukup' });
           }
         }
         
@@ -533,7 +564,6 @@ const leaveSubmissionController = {
           const [updateSubmission] = await LeaveSubmission.update({
             status: 'Diterima',
             approver_user_id: user_id,
-            // updatedAt: new Date(),
             updated_by: user_id
           }, {where: { id: submissionId, is_deleted: 0 }})
 
@@ -541,18 +571,34 @@ const leaveSubmissionController = {
             res.status(404).json({ error: 'Submission not found' });
           } 
 
+          const userId = submission.user_id;
+          const leaveAllowance = await LeaveAllowance.findOne({ where: { user_id: userId, is_deleted: 0 } });
+          if (!leaveAllowance) {
+            res.status(500).json({ error: 'Leave allowance not found' });
+            return;
+          }
+
           if(submission.leave_type_id === 1){
-            const userId = submission.user_id;
-      
-              // Kurangi jatah cuti di leave_allowance
-            const leaveAllowance = await LeaveAllowance.findOne({ where: { user_id: userId, is_deleted: 0 } });
-            if (!leaveAllowance) {
-              res.status(500).json({ error: 'Leave allowance not found' });
-              return;
-            }
             await leaveAllowance.update({ total_days: (leaveAllowance.total_days ?? 0) - submission.total_days })
           }
 
+          const leaveTypeId = submission.leave_type_id
+          if (leaveTypeId !== null) {
+            const leaveType = await LeaveType.findOne({ where: { id: leaveTypeId, is_deleted: 0 } });
+            if (!leaveType) {
+              return res.status(404).json({ error: 'Leave type not found' });
+            }
+            
+            if (leaveType?.is_emergency === 1) {
+              const leaveTypeTotalDays = leaveType.total_days ?? 0;
+              const extraDay = submission.total_days - leaveTypeTotalDays;
+              await leaveAllowance.update({ total_days: (leaveAllowance.total_days ?? 0) - extraDay })
+            }  
+          } else {
+            return res.status(400).json({ error: 'Invalid leave type ID' });
+          }
+
+          
           res.status(200).json({ message: 'User updated successfully' });
         }
       } catch (error) {
@@ -1118,393 +1164,96 @@ const leaveSubmissionController = {
     },
 
 
-
-    getLeaveHistory: async (req: Request, res: Response) => {
+    getLeaveStats: async (req: Request, res: Response) => {
       try {
-        const { month, year, page, limit } = req.query;
-        const sort_by = req.query.sort_by as string || 'asc';
-        const sort_field = req.query.sort_field as string || 'userId';
+        const { month, year } = req.query;
+        const token = req.headers.authorization?.split(' ')[1];
     
-        // Validate query parameters
-        if (typeof month !== 'string' || typeof year !== 'string') {
-            return res.status(400).json({ error: 'Invalid query parameters' });
+        if (!token) {
+          return res.status(401).json({ error: 'No token provided' });
         }
     
-        const monthNum = parseInt(month); // Convert month to number
-        const yearNum = parseInt(year); // Convert year to number
+        // Verifikasi token dan ekstrak payload
+        const decoded = jwt.verify(token, 'your_secret_key') as { role: string };
+        const role = decoded.role;
     
-        if (isNaN(monthNum) || isNaN(yearNum)) {
-            return res.status(400).json({ error: 'Invalid query parameters' });
-        }
+        // if (role !== 'hr') {
+        //   return res.status(403).json({ error: 'Access denied' });
+        // }
     
-        const startDate = new Date(yearNum, monthNum - 1, 1);
-        const endDate = new Date(yearNum, monthNum, 0);
+        // Validasi bulan dan tahun
+        const startDate = new Date(`${year}-${month}-01`);
+        const endDate = new Date(startDate.getFullYear(), startDate.getMonth() + 1, 1);
     
-        // Query leave submissions from the database
-        const leaveSubmissions: LeaveSubmission[] = await LeaveSubmission.findAll({
+        const leaveStats = await User.findAll({
+          attributes: [
+            'id',
+            'name',
+            'join_date',
+            [Sequelize.literal(`(
+              SELECT COUNT(*)
+              FROM leave_submissions AS b
+              WHERE b.is_deleted = 0
+              AND b.start_date BETWEEN '${startDate.toISOString()}' AND '${endDate.toISOString()}'
+              AND b.user_id = User.id
+            )`), 'total_cuti'],
+            [Sequelize.literal(`(
+              SELECT COUNT(*)
+              FROM leave_submissions AS b
+              WHERE b.is_deleted = 0
+              AND b.status = 'diterima'
+              AND b.start_date BETWEEN '${startDate.toISOString()}' AND '${endDate.toISOString()}'
+              AND b.user_id = User.id
+            )`), 'cuti_diterima'],
+            [Sequelize.literal(`(
+              SELECT COUNT(*)
+              FROM leave_submissions AS b
+              WHERE b.is_deleted = 0
+              AND b.status = 'ditolak'
+              AND b.start_date BETWEEN '${startDate.toISOString()}'
+              AND '${endDate.toISOString()}'
+              AND b.user_id = User.id
+            )`), 'cuti_ditolak'],
+            [Sequelize.literal(`(
+              SELECT COUNT(*)
+              FROM leave_submissions AS b
+              WHERE b.is_deleted = 0
+              AND b.status = 'pending'
+              AND b.start_date BETWEEN '${startDate.toISOString()}' AND '${endDate.toISOString()}'
+              AND b.user_id = User.id
+            )`), 'cuti_pending'],
+          ],
           where: {
-              start_date: {
-                  [Op.between]: [startDate, endDate]
-              },
-              is_deleted: 0
+            role: {
+                [Op.ne]: 'owner'
+            },
           },
-          include: [{
-              model: User,
-              where: {
-                  role: {
-                      [Op.not]: 'owner'
-                  }
-              }
-          }],
         });
     
-        // Processed users
-        const processedUsers: string[] = [];
-
-        // Object to store leave history for each user
-        const leaveHistory: { userId: number; name: string; data: number[] }[] = [];
-
-        leaveSubmissions.forEach((submission: LeaveSubmission) => {
-            const start = new Date(submission.start_date);
-            const end = new Date(submission.end_date);
-
-            const user = submission.User;
-
-            if (user) {
-                const userId = user.id;
-                const userName = user.name;
-
-                const status = submission.status?.toLowerCase() || 'pending';
-
-                // Check if the user already exists in leaveHistory
-                const existingUserIndex = leaveHistory.findIndex(entry => entry.userId === userId);
-                if (existingUserIndex !== -1) {
-                    // If exists, increment the corresponding status count
-                    switch (status) {
-                        case 'diterima':
-                            leaveHistory[existingUserIndex].data[0]++;
-                            break;
-                        case 'ditolak':
-                            leaveHistory[existingUserIndex].data[1]++;
-                            break;
-                        case 'pending':
-                            leaveHistory[existingUserIndex].data[2]++;
-                            break;
-                        default:
-                            break;
-                    }
-                } else {
-                    // If not, add a new entry for the user
-                    const newData: number[] = [0, 0, 0]; // [diterima, ditolak, pending]
-                    switch (status) {
-                        case 'diterima':
-                            newData[0]++;
-                            break;
-                        case 'ditolak':
-                            newData[1]++;
-                            break;
-                        case 'pending':
-                            newData[2]++;
-                            break;
-                        default:
-                            break;
-                    }
-                    leaveHistory.push({ userId, name: userName, data: newData });
-                }
-
-                // Mark user as processed
-                processedUsers.push(userName);
-            } else {
-                console.error('Invalid user data:', submission.User);
-            }
-        });
-
-        // Check users who didn't submit leave and add them to leaveHistory
-        const allUsers = await User.findAll();
-        allUsers.forEach(user => {
-            if (!processedUsers.includes(user.name)) {
-                leaveHistory.push({ userId: user.id, name: user.name, data: [0, 0, 0] });
-            }
-        });
-
-        const updatedLeaveHistory = leaveHistory.map(entry => ({
-          userId: entry.userId,
-          name: entry.name,
-          data: entry.data.map(val => val.toString()).join(',') // Convert numbers to strings and join with comma
+        const formattedStats = leaveStats.map((stat: any) => ({
+          id: stat.id,
+          name: stat.name,
+          joinDate: stat.join_date,
+          totalCuti: stat.get('total_cuti'),
+          cutiDiterima: stat.get('cuti_diterima'),
+          cutiDitolak: stat.get('cuti_ditolak'),
+          cutiPending: stat.get('cuti_pending'),
+          sisaCuti: 0
         }));
-    
-        // Sorting
-        if (typeof sort_field === 'string' && typeof sort_by === 'string') {
-          if (sort_field === 'userId') {
-              updatedLeaveHistory.sort((a, b) => {
-                  const aValue = Number(a[sort_field]);
-                  const bValue = Number(b[sort_field]);
-                  return sort_by === 'asc' ? aValue - bValue : bValue - aValue;
-              });
-          } else if (sort_field === 'data') {
-              updatedLeaveHistory.sort((a, b) => {
-                  const aValue = a[sort_field].split(',').reduce((acc, val) => acc + parseInt(val), 0); // Split and sum values in the array
-                  const bValue = b[sort_field].split(',').reduce((acc, val) => acc + parseInt(val), 0); // Split and sum values in the array
-                  return sort_by === 'asc' ? aValue - bValue : bValue - aValue;
-              });
-          } else {
-              console.error('Invalid sort field:', sort_field);
-          }
-        }
-    
-        // Pagination
-        const pageNum = page ? parseInt(page as string) : 1;
-        const limitNum = limit ? parseInt(limit as string) : leaveHistory.length;
-        const startIndex = (pageNum - 1) * limitNum;
-        const endIndex = startIndex + limitNum;
-        const paginatedLeaveHistory = updatedLeaveHistory.slice(startIndex, endIndex);
-    
-        res.status(200).json(paginatedLeaveHistory);
-      } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: 'Unable to fetch leave history' });
-      }
-    },
-    
-    getLeaveHistoryEveryYear: async (req: Request, res: Response) => {
-      try {
-          const { year, page, limit } = req.query;
-          const sort_by = req.query.sort_by as string || 'asc';
-          const sort_field = req.query.sort_field as string || 'userId';
-  
-          // Validate query parameters
-          if (typeof year !== 'string') {
-              return res.status(400).json({ error: 'Invalid query parameters' });
-          }
-  
-          const yearNum = parseInt(year); // Convert year to number
-  
-          if (isNaN(yearNum)) {
-              return res.status(400).json({ error: 'Invalid query parameters' });
-          }
-  
-          const startDate = new Date(yearNum, 0, 1); // January 1st of the given year
-          const endDate = new Date(yearNum, 11, 31); // December 31st of the given year
-  
-          // Query leave submissions from the database
-          const leaveSubmissions: LeaveSubmission[] = await LeaveSubmission.findAll({
-              where: {
-                  start_date: {
-                      [Op.between]: [startDate, endDate]
-                  },
-                  is_deleted: 0
-              },
-              include: [{
-                  model: User,
-                  where: {
-                      role: {
-                          [Op.not]: 'owner'
-                      }
-                  }
-              }]
-          });
-  
-          // Processed users
-          const processedUsers: string[] = [];
-  
-          // Object to store leave history for each user
-          const leaveHistory: { userId: number; name: string; data: number[] }[] = [];
-  
-          leaveSubmissions.forEach((submission: LeaveSubmission) => {
-              const user = submission.User;
-  
-              if (user) {
-                  const userId = user.id;
-                  const userName = user.name;
-  
-                  const status = submission.status?.toLowerCase() || 'pending';
-  
-                  // Check if the user already exists in leaveHistory
-                  const existingUserIndex = leaveHistory.findIndex(entry => entry.userId === userId);
-                  if (existingUserIndex !== -1) {
-                      // If exists, increment the corresponding status count
-                      switch (status) {
-                          case 'diterima':
-                              leaveHistory[existingUserIndex].data[0]++;
-                              break;
-                          case 'ditolak':
-                              leaveHistory[existingUserIndex].data[1]++;
-                              break;
-                          case 'pending':
-                              leaveHistory[existingUserIndex].data[2]++;
-                              break;
-                          default:
-                              break;
-                      }
-                  } else {
-                      // If not, add a new entry for the user
-                      const newData: number[] = [0, 0, 0]; // [diterima, ditolak, pending]
-                      switch (status) {
-                          case 'diterima':
-                              newData[0]++;
-                              break;
-                          case 'ditolak':
-                              newData[1]++;
-                              break;
-                          case 'pending':
-                              newData[2]++;
-                              break;
-                          default:
-                              break;
-                      }
-                      leaveHistory.push({ userId, name: userName, data: newData });
-                  }
-  
-                  // Mark user as processed
-                  processedUsers.push(userName);
-              } else {
-                  console.error('Invalid user data:', submission.User);
-              }
-          });
-  
-          // Check users who didn't submit leave and add them to leaveHistory
-          const allUsers = await User.findAll();
-          allUsers.forEach(user => {
-              if (!processedUsers.includes(user.name)) {
-                  leaveHistory.push({ userId: user.id, name: user.name, data: [0, 0, 0] });
-              }
-          });
-  
-          const updatedLeaveHistory = leaveHistory.map(entry => ({
-              userId: entry.userId,
-              name: entry.name,
-              data: entry.data.map(val => val.toString()).join(',') // Convert numbers to strings and join with comma
-          }));
-  
-          // Sorting
-          if (typeof sort_field === 'string' && typeof sort_by === 'string') {
-            if (sort_field === 'userId') {
-                updatedLeaveHistory.sort((a, b) => {
-                    const aValue = Number(a[sort_field]);
-                    const bValue = Number(b[sort_field]);
-                    return sort_by === 'asc' ? aValue - bValue : bValue - aValue;
-                });
-            } else if (sort_field === 'data') {
-                updatedLeaveHistory.sort((a, b) => {
-                    const aValue = a[sort_field].split(',').reduce((acc, val) => acc + parseInt(val), 0); // Split and sum values in the array
-                    const bValue = b[sort_field].split(',').reduce((acc, val) => acc + parseInt(val), 0); // Split and sum values in the array
-                    return sort_by === 'asc' ? aValue - bValue : bValue - aValue;
-                });
-            } else {
-                console.error('Invalid sort field:', sort_field);
-            }
-        }
-  
-          // Pagination
-          const pageNum = page ? parseInt(page as string) : 1;
-          const limitNum = limit ? parseInt(limit as string) : leaveHistory.length;
-          const startIndex = (pageNum - 1) * limitNum;
-          const endIndex = startIndex + limitNum;
-          const paginatedLeaveHistory = updatedLeaveHistory.slice(startIndex, endIndex);
-  
-          res.status(200).json(paginatedLeaveHistory);
-      } catch (error) {
-          console.error(error);
-          res.status(500).json({ error: 'Unable to fetch leave history' });
-      }
-    },
-  
-    
-    getMonthlyLeaveChart: async (req: Request, res: Response) => {
-      try {
-        const { year, limit, page } = req.query;
-        const sort_by = req.query.sort_by as string || 'asc';
-        const sort_field = req.query.sort_field as string || 'month';
-    
-        // Validate query parameters
-        if (typeof year !== 'string') {
-          return res.status(400).json({ error: 'Invalid query parameters' });
-        }
-    
-        const yearNum = parseInt(year);
-    
-        if (isNaN(yearNum)) {
-          return res.status(400).json({ error: 'Invalid query parameters' });
-        }
-    
-        const statuses = ["diterima", "ditolak", "pending"];
-        const monthlyLeaveSummary: { [key: string]: number }[] = Array(12).fill(null).map(() => ({
-          diterima: 0,
-          ditolak: 0,
-          pending: 0
-        }));
-    
-        for (let month = 0; month < 12; month++) {
-          const startDate = new Date(yearNum, month, 1);
-          const endDate = new Date(yearNum, month + 1, 1);
-          endDate.setDate(endDate.getDate() - 1);
-    
-          // Query leave submissions from the database
-          const leaveSubmissions: LeaveSubmission[] = await LeaveSubmission.findAll({
-            where: {
-              start_date: {
-                [Op.between]: [startDate, endDate]
-              },
-              is_deleted: 0
-            }
-          });
-    
-          // Count leave submissions by their status
-          leaveSubmissions.forEach((submission: LeaveSubmission) => {
-            const normalizedStatus = submission.status?.toLowerCase();
-            if (normalizedStatus && statuses.includes(normalizedStatus)) {
-              monthlyLeaveSummary[month][normalizedStatus]++;
-            }
-          });
-        }
-    
-        const monthNames = [
-          "Januari", "Februari", "Maret", "April", "Mei", "Juni",
-          "Juli", "Agustus", "September", "Oktober", "November", "Desember"
-        ];
-    
-        let response = monthNames.map((month, index) => ({
-          month,
-          data: [
-            monthlyLeaveSummary[index].diterima,
-            monthlyLeaveSummary[index].ditolak,
-            monthlyLeaveSummary[index].pending
-          ].join(', ')
-        }));
-    
-        // Sorting
-        if (sort_field && sort_by) {
-          response = response.sort((a, b) => {
-            if (sort_field === 'month') {
-              if (sort_by === 'asc') {
-                return monthNames.indexOf(a.month) - monthNames.indexOf(b.month);
-              } else {
-                return monthNames.indexOf(b.month) - monthNames.indexOf(a.month);
-              }
-            }
-            return 0;
-          });
-        }
-    
-        // Pagination
-        const limitNum = limit ? parseInt(limit as string) : response.length;
-        const pageNum = page ? parseInt(page as string) : 1;
-        const startIndex = (pageNum - 1) * limitNum;
-        const endIndex = startIndex + limitNum;
-        const paginatedResponse = response.slice(startIndex, endIndex);
     
         res.status(200).json({
-          year: yearNum,
-          totalEntries: response.length,
-          page: pageNum,
-          limit: limitNum,
-          monthlyLeaveSummary: paginatedResponse
+          month,
+          year,
+          stats: formattedStats,
         });
       } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: 'Unable to fetch leave submissions' });
+        console.error('Error while fetching leave statistics:', error);
+        res.status(500).json({ error: 'Unable to fetch leave statistics' });
       }
-    },
+    }
+
+
+
     
     
     
