@@ -40,6 +40,7 @@ const authController = {
           const payload = {
             userId: user.id,
             role: user.role,
+            gender: user.gender
           };
       
           // Buat token JWT menggunakan payload dan secret key

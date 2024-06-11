@@ -1,25 +1,38 @@
 import { Request, Response } from "express";
 import LeaveType from "../db/models/leaveTypeModel";
 import jwt from "jsonwebtoken";
+import { Op } from "sequelize";
 
 const leaveTypeController = {
     getAll: async (req: Request, res: Response) => {
-        try {
-          let whereClause: any = {}; // Inisialisasi klausa where untuk query findAll
-
-        // Periksa apakah query parameter is_emergency ada dalam req.query
-          if (req.query.is_emergency !== undefined) {
-              const is_emergency = req.query.is_emergency as string;
-              whereClause.is_emergency = is_emergency; // Konversi nilai string menjadi boolean
-          }
-
-          const types = await LeaveType.findAll({ where: whereClause });
-          res.status(200).json(types);
-        } catch (error) {
-          // Menangani kesalahan jika terjadi
-          console.error('Error while fetching users:', error);
-          res.status(500).json({ error: 'Unable to fetch users' });
+      try {
+        const token = req.headers.authorization?.split(' ')[1];
+    
+        if (!token) {
+          return res.status(401).json({ error: 'No token provided' });
         }
+    
+        const decoded = jwt.verify(token, 'your_secret_key') as { gender: string };
+        const gender = decoded.gender;
+        
+        console.log(gender)
+        let whereClause: any = {}; 
+    
+        if (gender === 'male') {
+          whereClause.id = { [Op.ne]: 10 }; 
+        }
+
+        if (req.query.is_emergency !== undefined) {
+          const is_emergency = req.query.is_emergency as string;
+          whereClause.is_emergency = is_emergency; 
+        }
+    
+        const types = await LeaveType.findAll({ where: whereClause });
+        res.status(200).json(types);
+      } catch (error) {
+        console.error('Error while fetching users:', error);
+        res.status(500).json({ error: 'Unable to fetch users' });
+      }
     },
 
     createLeaveType: async (req: Request, res: Response) => {

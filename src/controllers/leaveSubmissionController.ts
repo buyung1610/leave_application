@@ -417,10 +417,13 @@ const leaveSubmissionController = {
           return res.status(404).json({ error: 'leave allowance not found' });
         }
 
+        let reductionAmount = 0
+
         if (leave_type === 1 || leave_type === "1") {
           if (leaveAllowance.total_days === null || leaveAllowance.total_days === 0 || leaveAllowance.total_days < numberOfDays) {
             return res.status(401).json({ error: 'Jatah cuti tidak cukup' });
           }
+          reductionAmount = numberOfDays
         }        
 
         if (leaveType?.is_emergency === 1) {
@@ -429,12 +432,14 @@ const leaveSubmissionController = {
           if (leaveAllowance.total_days === null || leaveAllowance.total_days === 0 || leaveAllowance.total_days < extraDay) {
             return res.status(401).json({ error: 'Jatah cuti tidak cukup' });
           }
+          reductionAmount = extraDay
         }
 
         const leaveSubmission = await LeaveSubmission.create({
           user_id: user_id,
           leave_type_id: leave_type,
           total_days: numberOfDays,
+          reduction_amount: reductionAmount,
           start_date: start_date,
           end_date: end_date,
           emergency_call: emergency_call,
@@ -443,6 +448,96 @@ const leaveSubmissionController = {
           created_by: user_id,
           is_deleted: 0,
           attachment: attachment
+        });
+    
+        return res.status(201).json({ message: 'Leave submission created successfully' });
+      } catch (error) {
+        console.error(error);
+        return res.status(500).json({ error: 'Unable to create leave submission' });
+      }
+    },
+
+    createEmployeeSubmission: async (req: Request, res: Response) => {
+      try {
+        const userIdParams = req.params.id
+        const userIdParamsInt = parseInt(req.params.id)
+
+        const { start_date, end_date, leave_type, emergency_call, description, attachment } = req.body;
+        const token = req.headers.authorization?.split(' ')[1];
+    
+        if (!token) {
+          return res.status(401).json({ error: 'No token provided' });
+        }
+    
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+          return res.status(400).json({ errors: errors.array() });
+        }
+    
+        const decoded = jwt.verify(token, 'your_secret_key') as { userId: number };
+        const user_id = decoded.userId;
+
+        const startDate = new Date(start_date);
+        const endDate = new Date(end_date);
+        const calculateWorkingDays = (start: Date, end: Date): number => {
+          let totalDays = 0;
+          let currentDate = new Date(start);
+    
+          while (currentDate <= end) {
+            const dayOfWeek = currentDate.getDay();
+            if (dayOfWeek !== 0 && dayOfWeek !== 6 || currentDate.getDate() === 31) {
+              totalDays++;
+            }
+            currentDate.setDate(currentDate.getDate() + 1);
+          }
+    
+          return totalDays;
+        };
+    
+        const numberOfDays = calculateWorkingDays(startDate, endDate);
+        const leaveType = await LeaveType.findOne({ where: { id: leave_type, is_deleted: 0 }})
+        const leaveAllowance = await LeaveAllowance.findOne({ where: { user_id: user_id, is_deleted: 0 } });
+
+        if (!leaveType) {
+          return res.status(404).json({ error: 'leave type not found' });
+        }
+
+        if (!leaveAllowance) {
+          return res.status(404).json({ error: 'leave allowance not found' });
+        }
+
+        let reductionAmount = 0
+
+        if (leave_type === 1 || leave_type === "1") {
+          if (leaveAllowance.total_days === null || leaveAllowance.total_days === 0 || leaveAllowance.total_days < numberOfDays) {
+            return res.status(401).json({ error: 'Jatah cuti tidak cukup' });
+          }
+          reductionAmount = numberOfDays
+        }        
+
+        if (leaveType?.is_emergency === 1) {
+          const leaveTypeTotalDays = leaveType.total_days ?? 0;
+          const extraDay = numberOfDays - leaveTypeTotalDays;
+          if (leaveAllowance.total_days === null || leaveAllowance.total_days === 0 || leaveAllowance.total_days < extraDay) {
+            return res.status(401).json({ error: 'Jatah cuti tidak cukup' });
+          }
+          reductionAmount = extraDay
+        }
+
+        const leaveSubmission = await LeaveSubmission.create({
+          user_id: userIdParamsInt,
+          leave_type_id: leave_type,
+          total_days: numberOfDays,
+          reduction_amount: reductionAmount,
+          start_date: start_date,
+          end_date: end_date,
+          emergency_call: emergency_call,
+          description: description,
+          created_at: new Date(),
+          created_by: user_id,
+          is_deleted: 0,
+          attachment: attachment,
+          status: "Diterima"
         });
     
         return res.status(201).json({ message: 'Leave submission created successfully' });
@@ -495,10 +590,12 @@ const leaveSubmissionController = {
           return res.status(404).json({ error: 'leave allowance not found' });
         }
 
+        let reductionAmount = 0
         if (leave_type === 1 || leave_type === "1") {
           if (leaveAllowance.total_days === null || leaveAllowance.total_days === 0 || leaveAllowance.total_days < numberOfDays) {
             return res.status(401).json({ error: 'Jatah cuti tidak cukup' });
           }
+          reductionAmount = numberOfDays
         }        
 
         if (leaveType?.is_emergency === 1) {
@@ -507,11 +604,13 @@ const leaveSubmissionController = {
           if (leaveAllowance.total_days === null || leaveAllowance.total_days === 0 || leaveAllowance.total_days < extraDay) {
             return res.status(401).json({ error: 'Jatah cuti tidak cukup' });
           }
+          reductionAmount = extraDay
         }
         
         const [updateSubmission] = await LeaveSubmission.update({
             leave_type_id: leave_type,
             total_days: numberOfDays,
+            reduction_amount: reductionAmount,
             start_date: start_date,
             end_date: end_date,
             emergency_call,
@@ -1195,6 +1294,15 @@ const leaveSubmissionController = {
           startDate = new Date(`${year}-${month}-01`);
           endDate = new Date(startDate.getFullYear(), startDate.getMonth() + 1, 1);
         }
+
+        let startLeaveDate, endLeaveDate;
+        if (parseInt(month) === 0) {
+          startLeaveDate = new Date(`${year}-01-01`);
+          endLeaveDate = new Date(`${year}-12-31`);
+        } else {
+          startLeaveDate = new Date(`${year}-01-01`);
+          endLeaveDate = new Date(startDate.getFullYear(), startDate.getMonth() + 1, 1);
+        }
     
         const leaveStats = await User.findAll({
           attributes: [
@@ -1221,8 +1329,7 @@ const leaveSubmissionController = {
               FROM leave_submissions AS b
               WHERE b.is_deleted = 0
               AND b.status = 'ditolak'
-              AND b.start_date BETWEEN '${startDate.toISOString()}'
-              AND '${endDate.toISOString()}'
+              AND b.start_date BETWEEN '${startDate.toISOString()}' AND '${endDate.toISOString()}'
               AND b.user_id = User.id
             )`), 'cuti_ditolak'],
             [Sequelize.literal(`(
@@ -1233,6 +1340,20 @@ const leaveSubmissionController = {
               AND b.start_date BETWEEN '${startDate.toISOString()}' AND '${endDate.toISOString()}'
               AND b.user_id = User.id
             )`), 'cuti_pending'],
+            [Sequelize.literal(`(
+              SELECT SUM(b.reduction_amount)
+              FROM leave_submissions AS b
+              WHERE b.is_deleted = 0
+              AND b.status = 'diterima'
+              AND b.start_date BETWEEN '${startLeaveDate.toISOString()}' AND '${endLeaveDate.toISOString()}'   
+              AND b.user_id = User.id
+            )`), 'jumlah_hari_cuti'],
+            [Sequelize.literal(`(
+              SELECT SUM(c.total_days_copy)
+              FROM leave_allowance AS c
+              WHERE c.is_deleted = 0 
+              AND c.user_id = User.id
+            )`), 'sisa_cuti'],
           ],
           where: {
             role: {
@@ -1240,16 +1361,28 @@ const leaveSubmissionController = {
             },
           },
         });
+        
     
-        const formattedStats = leaveStats.map((stat: any) => ({
-          id: stat.id,
-          name: stat.name,
-          joinDate: stat.join_date,
-          totalCuti: stat.get('total_cuti'),
-          cutiDiterima: stat.get('cuti_diterima'),
-          cutiDitolak: stat.get('cuti_ditolak'),
-          cutiPending: stat.get('cuti_pending'),
-        }));
+        const formattedStats = leaveStats.map((stat: any) => {
+          const jumlahHariCuti = stat.get("jumlah_hari_cuti");
+          const hitunganSisaCuti = stat.get("sisa_cuti")
+          const jumlahHariCutInt = jumlahHariCuti ? parseInt(jumlahHariCuti, 10) : 0;
+          const hitunganSisaCutiInt = hitunganSisaCuti ? parseInt(hitunganSisaCuti, 10) : 0;
+
+          const sisaCuti = hitunganSisaCutiInt - jumlahHariCutInt
+        
+          return {
+            id: stat.id,
+            name: stat.name,
+            joinDate: stat.join_date,
+            totalCuti: stat.get('total_cuti'),
+            cutiDiterima: stat.get('cuti_diterima'),
+            cutiDitolak: stat.get('cuti_ditolak'),
+            cutiPending: stat.get('cuti_pending'),
+            jumlahHariCuti: jumlahHariCutInt,
+            sisaCuti: sisaCuti,
+          };
+        });
     
         res.status(200).json({
           month,
@@ -1262,12 +1395,6 @@ const leaveSubmissionController = {
       }
     }
 
-
-
-    
-    
-    
-    
 } 
 
 export default leaveSubmissionController

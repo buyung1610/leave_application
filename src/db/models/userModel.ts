@@ -101,7 +101,7 @@ User.init(
       allowNull: false,
     },
     gender: {
-      type: DataTypes.ENUM('male', 'female', 'other'),
+      type: DataTypes.ENUM('male', 'female'),
       allowNull: false,
     },
     created_at: {

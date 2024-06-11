@@ -46,11 +46,14 @@ const job = new cron.CronJob('0 0 1 1 *', async () => {
                 leaveAllowance = 0;
             }
 
-            console.log(`User ${user.id} - Leave Allowance: ${leaveAllowance}`);
-            // await LeaveAllowance.update(
-            //     { total_days: leaveAllowance },
-            //     { where: { user_id: user.id } } 
-            // );
+            // console.log(`User ${user.id} - Leave Allowance: ${leaveAllowance}`);
+            await LeaveAllowance.update(
+                { 
+                    total_days: leaveAllowance, 
+                    total_days_copy: leaveAllowance 
+                },
+                { where: { user_id: user.id } } 
+            );
         }
 
         console.log('Sisa cuti tahunan berhasil diperbarui');

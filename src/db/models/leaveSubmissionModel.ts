@@ -10,6 +10,7 @@ interface LeaveSubmissionAttributes {
   leave_type_id: number | null;
   approver_user_id: number | null;
   total_days: number;
+  reduction_amount: number;
   start_date: Date;
   end_date: Date;
   emergency_call: string;
@@ -35,6 +36,7 @@ class LeaveSubmission extends Model<LeaveSubmissionAttributes> implements LeaveS
   public leave_type_id!: number | null;
   public approver_user_id!: number | null;
   public total_days!: number;
+  public reduction_amount!: number;
   public start_date!: Date;
   public end_date!: Date;
   public emergency_call!: string;
@@ -87,6 +89,11 @@ LeaveSubmission.init(
       },
     },
     total_days: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 0,
+    },
+    reduction_amount: {
       type: DataTypes.INTEGER,
       allowNull: false,
       defaultValue: 0,

@@ -92,7 +92,7 @@ const userController = {
   
   createUser: async (req: Request, res: Response) => {
     try {
-      const { name, email, role, position, department, telephone, join_date, gender } = req.body;
+      const { name, email, role, position, department, telephone, join_date, gender, leave_allowance } = req.body;
       const token = req.headers.authorization?.split(' ')[1];
 
       if (!token) {
@@ -139,20 +139,26 @@ const userController = {
       const diffMonths = diffYears * 12 + (currentDate.getMonth() - joinDate.getMonth());
       
       let leaveAllowance = 0;
-      if (diffMonths >= 72) {
+      if ( leave_allowance === 0 ){
+        leaveAllowance = 0
+      } else if ( !leave_allowance || typeof leave_allowance !== 'number' ){
+        if (diffMonths >= 72) {
           leaveAllowance = 17;
-      } else if (diffMonths >= 60) {
+        } else if (diffMonths >= 60) {
           leaveAllowance = 16;
-      } else if (diffMonths >= 48) {
+        } else if (diffMonths >= 48) {
           leaveAllowance = 15;
-      } else if (diffMonths >= 36) {
+        } else if (diffMonths >= 36) {
           leaveAllowance = 14;
-      } else if (diffMonths >= 24) {
+        } else if (diffMonths >= 24) {
           leaveAllowance = 13;
-      } else if (diffMonths >= 12) {
+        } else if (diffMonths >= 12) {
           leaveAllowance = 12;
-      } else {
+        } else {
           leaveAllowance = 0;
+        }
+      } else {
+        leaveAllowance = leave_allowance
       }
       // Membuat data jatah cuti untuk pengguna baru
       const newLeaveAllowance = await LeaveAllowance.create({

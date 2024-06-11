@@ -6,6 +6,7 @@ interface LeaveAllowanceAttributes {
   id?: number;
   user_id: number | null;
   total_days: number | null;
+  total_days_copy: number | null;
   created_at: Date | null;
   updated_at: Date | null;
   deleted_at: Date | null;
@@ -19,6 +20,7 @@ class LeaveAllowance extends Model<LeaveAllowanceAttributes> implements LeaveAll
   public id!: number;
   public user_id!: number | null;
   public total_days!: number | null;
+  public total_days_copy!: number | null;
   public created_at!: Date | null;
   public updated_at!: Date | null;
   public deleted_at!: Date | null;
@@ -46,6 +48,10 @@ LeaveAllowance.init(
       },
     },
     total_days: {
+      type: DataTypes.INTEGER.UNSIGNED,
+      allowNull: true,
+    },
+    total_days_copy: {
       type: DataTypes.INTEGER.UNSIGNED,
       allowNull: true,
     },
