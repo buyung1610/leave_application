@@ -460,6 +460,10 @@ const leaveSubmissionController = {
     createEmployeeSubmission: async (req: Request, res: Response) => {
       try {
         const userIdParams = req.params.id
+        const user: any = await User.findByPk(userIdParams)
+        if (!user) {
+          return res.status(404).json({ error: 'user not found' });
+        }
         const userIdParamsInt = parseInt(req.params.id)
 
         const { start_date, end_date, leave_type, emergency_call, description, attachment } = req.body;
