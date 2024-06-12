@@ -47,8 +47,14 @@ const leaveTypeController = {
 
     getAll: async (req: Request, res: Response) => {
       try {
+        let whereClause: any = {}; 
         
-        const types = await LeaveType.findAll();
+        if (req.query.is_emergency !== undefined) {
+          const is_emergency = req.query.is_emergency as string;
+          whereClause.is_emergency = is_emergency; 
+        }
+    
+        const types = await LeaveType.findAll({ where: whereClause });
         res.status(200).json(types);
       } catch (error) {
         console.error('Error while fetching users:', error);
