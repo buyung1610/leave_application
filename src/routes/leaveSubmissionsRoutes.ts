@@ -132,6 +132,8 @@ router.get("/permintaan-cuti", verifyToken, submissionController.permintaanCuti)
 
 router.get("/history-user", verifyToken, submissionController.getLeaveStats);
 
+router.get("/download-history-user", verifyToken, submissionController.downloadLeaveStats);
+
 router.get("/karyawan-cuti", verifyToken, submissionController.karyawanCuti);
 
 router.get("/cuti-diterima", verifyToken, submissionController.cutiDiterima);

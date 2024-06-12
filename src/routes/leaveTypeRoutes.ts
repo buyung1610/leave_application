@@ -6,7 +6,9 @@ import { verifyToken } from "../middleware/verifyToken";
 const router = express.Router();
 
 
-router.get("/", verifyToken, leaveTypeController.getAll);
+router.get("/", verifyToken, leaveTypeController.getFromGender);
+
+router.get("/get-all", verifyToken, leaveTypeController.getAll);
 
 router.post("/", verifyToken, leaveTypeController.createLeaveType);
 

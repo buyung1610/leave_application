@@ -1,4 +1,4 @@
-import { Request, Response } from "express";
+import { Request, Response, response } from "express";
 import LeaveSubmission from "../db/models/leaveSubmissionModel";
 import LeaveAllowance from "../db/models/leaveAllowanceModel";
 import jwt from "jsonwebtoken"
@@ -9,6 +9,7 @@ import LeaveType from "../db/models/leaveTypeModel";
 import { format } from "date-fns";
 import path from "path";
 import fs from 'fs';
+import XLSX from 'xlsx';
 import dotenv from 'dotenv'
 import sequelize from "../config/dbConnection";
 import { count } from "console";
@@ -1329,19 +1330,17 @@ const leaveSubmissionController = {
     
         // Validasi bulan dan tahun
         let startDate, endDate;
+        let startLeaveDate, endLeaveDate;
         if (parseInt(month) === 0) {
           startDate = new Date(`${year}-01-01`);
           endDate = new Date(`${year}-12-31`);
-        } else {
-          startDate = new Date(`${year}-${month}-01`);
-          endDate = new Date(startDate.getFullYear(), startDate.getMonth() + 1, 1);
-        }
 
-        let startLeaveDate, endLeaveDate;
-        if (parseInt(month) === 0) {
           startLeaveDate = new Date(`${year}-01-01`);
           endLeaveDate = new Date(`${year}-12-31`);
         } else {
+          startDate = new Date(`${year}-${month}-01`);
+          endDate = new Date(startDate.getFullYear(), startDate.getMonth() + 1, 1);
+
           startLeaveDate = new Date(`${year}-01-01`);
           endLeaveDate = new Date(startDate.getFullYear(), startDate.getMonth() + 1, 1);
         }
@@ -1431,6 +1430,136 @@ const leaveSubmissionController = {
           year,
           stats: formattedStats,
         });
+      } catch (error) {
+        console.error('Error while fetching leave statistics:', error);
+        res.status(500).json({ error: 'Unable to fetch leave statistics' });
+      }
+    },
+
+    downloadLeaveStats: async (req: Request, res: Response) => {
+      try {
+        const { month, year } = req.query;
+    
+        if (typeof month !== 'string' || !year) {
+          return res.status(400).json({ error: 'Invalid month or year' });
+        }
+    
+        const token = req.headers.authorization?.split(' ')[1];
+    
+        if (!token) {
+          return res.status(401).json({ error: 'No token provided' });
+        }
+    
+        const decoded = jwt.verify(token, 'your_secret_key') as { role: string };
+        const role = decoded.role;
+    
+        let filename
+        let startDate, endDate;
+        let startLeaveDate, endLeaveDate;
+        if (parseInt(month) === 0) {
+          startDate = new Date(`${year}-01-01`);
+          endDate = new Date(`${year}-12-31`);
+
+          startLeaveDate = new Date(`${year}-01-01`);
+          endLeaveDate = new Date(`${year}-12-31`);
+
+          filename = year
+        } else {
+          startDate = new Date(`${year}-${month}-01`);
+          endDate = new Date(startDate.getFullYear(), startDate.getMonth() + 1, 1);
+
+          startLeaveDate = new Date(`${year}-01-01`);
+          endLeaveDate = new Date(startDate.getFullYear(), startDate.getMonth() + 1, 1);
+
+          filename = `${month}_${year}`
+        }
+    
+        const leaveStats = await User.findAll({
+          attributes: [
+            'id',
+            'name',
+            'join_date',
+            [Sequelize.literal(`(
+              SELECT COUNT(*)
+              FROM leave_submissions AS b
+              WHERE b.is_deleted = 0
+              AND b.start_date BETWEEN '${startDate.toISOString()}' AND '${endDate.toISOString()}'
+              AND b.user_id = User.id
+            )`), 'total_cuti'],
+            [Sequelize.literal(`(
+              SELECT COUNT(*)
+              FROM leave_submissions AS b
+              WHERE b.is_deleted = 0
+              AND b.status = 'diterima'
+              AND b.start_date BETWEEN '${startDate.toISOString()}' AND '${endDate.toISOString()}'
+              AND b.user_id = User.id
+            )`), 'cuti_diterima'],
+            [Sequelize.literal(`(
+              SELECT COUNT(*)
+              FROM leave_submissions AS b
+              WHERE b.is_deleted = 0
+              AND b.status = 'ditolak'
+              AND b.start_date BETWEEN '${startDate.toISOString()}' AND '${endDate.toISOString()}'
+              AND b.user_id = User.id
+            )`), 'cuti_ditolak'],
+            [Sequelize.literal(`(
+              SELECT COUNT(*)
+              FROM leave_submissions AS b
+              WHERE b.is_deleted = 0
+              AND b.status = 'pending'
+              AND b.start_date BETWEEN '${startDate.toISOString()}' AND '${endDate.toISOString()}'
+              AND b.user_id = User.id
+            )`), 'cuti_pending'],
+            [Sequelize.literal(`(
+              SELECT SUM(b.reduction_amount)
+              FROM leave_submissions AS b
+              WHERE b.is_deleted = 0
+              AND b.status = 'diterima'
+              AND b.start_date BETWEEN '${startLeaveDate.toISOString()}' AND '${endLeaveDate.toISOString()}'
+              AND b.user_id = User.id
+            )`), 'jumlah_hari_cuti'],
+            [Sequelize.literal(`(
+              SELECT SUM(c.total_days_copy)
+              FROM leave_allowance AS c
+              WHERE c.is_deleted = 0
+              AND c.user_id = User.id
+            )`), 'sisa_cuti'],
+          ],
+          where: {
+            role: {
+              [Op.ne]: 'owner'
+            },
+          },
+        });
+    
+        const formattedStats = leaveStats.map((stat: any) => {
+          const jumlahHariCuti = stat.get("jumlah_hari_cuti");
+          const hitunganSisaCuti = stat.get("sisa_cuti");
+          const jumlahHariCutInt = jumlahHariCuti ? parseInt(jumlahHariCuti, 10) : 0;
+          const hitunganSisaCutiInt = hitunganSisaCuti ? parseInt(hitunganSisaCuti, 10) : 0;
+    
+          const sisaCuti = hitunganSisaCutiInt - jumlahHariCutInt;
+    
+          return {
+            "Nama": stat.name,
+            "Total Cuti": stat.get('total_cuti'),
+            "Cuti Diterima": stat.get('cuti_diterima'),
+            "Cuti Ditolak": stat.get('cuti_ditolak'),
+            "Cuti Pending": stat.get('cuti_pending'),
+            "Sisa Cuti": sisaCuti,
+          };
+        });
+    
+        const workbook = XLSX.utils.book_new();
+        const worksheet = XLSX.utils.json_to_sheet(formattedStats);
+        
+        XLSX.utils.book_append_sheet(workbook, worksheet, 'LeaveStats');
+
+        const buffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'buffer' });
+    
+        res.setHeader('Content-Disposition', `attachment; filename=histori_pengajuan_cuti_${filename}.xlsx`);
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.send(buffer);
       } catch (error) {
         console.error('Error while fetching leave statistics:', error);
         res.status(500).json({ error: 'Unable to fetch leave statistics' });

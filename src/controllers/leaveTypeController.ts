@@ -4,7 +4,7 @@ import jwt from "jsonwebtoken";
 import { Op } from "sequelize";
 
 const leaveTypeController = {
-    getAll: async (req: Request, res: Response) => {
+    getFromGender: async (req: Request, res: Response) => {
       try {
         const token = req.headers.authorization?.split(' ')[1];
     
@@ -38,6 +38,17 @@ const leaveTypeController = {
         }
     
         const types = await LeaveType.findAll({ where: whereClause });
+        res.status(200).json(types);
+      } catch (error) {
+        console.error('Error while fetching users:', error);
+        res.status(500).json({ error: 'Unable to fetch users' });
+      }
+    },
+
+    getAll: async (req: Request, res: Response) => {
+      try {
+        
+        const types = await LeaveType.findAll();
         res.status(200).json(types);
       } catch (error) {
         console.error('Error while fetching users:', error);

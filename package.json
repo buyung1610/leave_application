@@ -8,6 +8,7 @@
     "start": "node dist/index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
+  "proxy": "http://192.168.10.40:3000",
   "keywords": [],
   "author": "",
   "license": "ISC",
@@ -27,7 +28,8 @@
     "nodemailer": "^6.9.13",
     "nodemon": "^3.1.0",
     "sequelize": "^6.37.1",
-    "sinon": "^18.0.0"
+    "sinon": "^18.0.0",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@types/bcrypt": "^5.0.2",
