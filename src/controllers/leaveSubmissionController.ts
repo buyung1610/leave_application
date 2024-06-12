@@ -429,7 +429,7 @@ const leaveSubmissionController = {
         if (leaveType?.is_emergency === 1) {
           const leaveTypeTotalDays = leaveType.total_days ?? 0;
           const extraDay = numberOfDays - leaveTypeTotalDays;
-          if (leaveAllowance.total_days === null || leaveAllowance.total_days === 0 || leaveAllowance.total_days < extraDay) {
+          if (leaveAllowance.total_days ?? 0 < extraDay) {
             return res.status(401).json({ error: 'Jatah cuti tidak cukup' });
           }
           reductionAmount = extraDay

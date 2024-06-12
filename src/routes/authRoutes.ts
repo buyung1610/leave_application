@@ -4,11 +4,13 @@ import { verifyToken } from "../middleware/verifyToken";
 import { body } from 'express-validator';
 // import { requestPasswordReset, resetPassword } from '../controllers/authController';
 
+
 const router = express.Router();
 
-router.post('/request-password-reset', authController.forgotPassword);
-router.post('/reset-password', authController.resetPassword);
 
+router.post('/request-password-reset', authController.forgotPassword);
+
+router.post('/reset-password', authController.resetPassword);
 
 router.post("/login",[
     body('email').isEmail().withMessage('Invalid email'),

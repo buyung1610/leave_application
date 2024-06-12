@@ -6,12 +6,12 @@ import { body } from "express-validator";
 import LeaveAllowance from "../db/models/leaveAllowanceModel";
 import jwt from "jsonwebtoken";
 
+
 const router = express.Router();
 
-// Rute untuk mengunggah lampiran
+
 router.post("/upload", verifyToken, upload.single('file'), submissionController.uploadAttachment);
 
-// Rute untuk menghapus pengajuan cuti (Soft Delete)
 router.put("/delete/:id", verifyToken,[
     body('start_date').notEmpty().withMessage('Start date is required'),
     body('end_date').notEmpty().withMessage('End date is required'),
@@ -22,8 +22,8 @@ router.put("/delete/:id", verifyToken,[
 
 router.put("/upload/:id", verifyToken, upload.single('file'), submissionController.updateAttachment)
 
-// Rute untuk menerima atau menolak pengajuan cuti
 router.put("/:id/accept", verifyToken, authorize(['hr', 'owner']), submissionController.acceptSubmission);
+
 router.put("/:id/reject", verifyToken, authorize(['hr', 'owner']), submissionController.rejectSubmission);
 
 router.put("/:id", verifyToken, [
@@ -124,18 +124,14 @@ router.post("/", verifyToken,[
   }),
 ], submissionController.createSubmission);
 
-// Rute untuk menampilkan semua pengajuan cuti
 router.get("/", verifyToken, submissionController.getAllSubmission);
 
-// Rute untuk menampilkan pengajuan cuti ketika login
 router.get("/login", verifyToken, submissionController.getSubmissionLogin);
 
-// Rute untuk menampilkan pengajuan cuti yang dikirim hari ini dengan status pending
 router.get("/permintaan-cuti", verifyToken, submissionController.permintaanCuti);
 
 router.get("/history-user", verifyToken, submissionController.getLeaveStats);
 
-// Rute untuk menampilkan pengajuan cuti karyawan
 router.get("/karyawan-cuti", verifyToken, submissionController.karyawanCuti);
 
 router.get("/cuti-diterima", verifyToken, submissionController.cutiDiterima);
@@ -144,7 +140,6 @@ router.get("/cuti-ditolak", verifyToken, submissionController.cutiDitolak);
 
 router.get('/uploads/:filename', verifyToken, submissionController.getAttachment);
 
-// Rute untuk menampilkan pengajuan cuti berdasarkan ID
 router.get("/:id", verifyToken, submissionController.getSubmissionById);
 
 export default router;

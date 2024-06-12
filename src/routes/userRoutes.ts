@@ -4,7 +4,9 @@ import { verifyToken } from "../middleware/verifyToken";
 import { body } from "express-validator";
 import { authorize } from "../middleware/verifyToken";
 
+
 const router = express.Router();
+
 
 router.get("/profil", verifyToken, userController.getUserProfil)
 
@@ -43,16 +45,4 @@ router.put("/:id", verifyToken,[
     body('gender').notEmpty().withMessage('Gender is required')
 ], userController.updateUserData)
 
-
-
-// router.delete("/:id", verifyToken, userController.deleteUser)
-
-// router.get("/", userController.getAllUser);
-// router.get("/:id", userController.getUserById)
-// router.post("/", userController.createUser)
-// router.put("/update1/:id", userController.updateUserData1)
-// router.put("/update2/:id", userController.updateUserData2)
-// router.delete("/:id", userController.deleteUser)
-
-// router.put("/update3/:id", userController.updateUserData3)
 export default router;
