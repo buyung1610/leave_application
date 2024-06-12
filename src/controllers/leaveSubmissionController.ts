@@ -417,10 +417,14 @@ const leaveSubmissionController = {
           return res.status(404).json({ error: 'leave allowance not found' });
         }
 
+        if (leaveAllowance.total_days === null) {
+          return res.status(404).json({ error: 'leave allowance not found' });
+        }
+
         let reductionAmount = 0
 
         if (leave_type === 1 || leave_type === "1") {
-          if (leaveAllowance.total_days === null || leaveAllowance.total_days === 0 || leaveAllowance.total_days < numberOfDays) {
+          if (leaveAllowance.total_days === 0 || leaveAllowance.total_days < numberOfDays) {
             return res.status(401).json({ error: 'Jatah cuti tidak cukup' });
           }
           reductionAmount = numberOfDays
@@ -429,7 +433,7 @@ const leaveSubmissionController = {
         if (leaveType?.is_emergency === 1) {
           const leaveTypeTotalDays = leaveType.total_days ?? 0;
           const extraDay = numberOfDays - leaveTypeTotalDays;
-          if (leaveAllowance.total_days ?? 0 < extraDay) {
+          if (leaveAllowance.total_days < extraDay) {
             return res.status(401).json({ error: 'Jatah cuti tidak cukup' });
           }
           reductionAmount = extraDay
@@ -510,10 +514,14 @@ const leaveSubmissionController = {
           return res.status(404).json({ error: 'leave allowance not found' });
         }
 
+        if (leaveAllowance.total_days === null) {
+          return res.status(404).json({ error: 'leave allowance not found' });
+        }
+
         let reductionAmount = 0
 
         if (leave_type === 1 || leave_type === "1") {
-          if (leaveAllowance.total_days === null || leaveAllowance.total_days === 0 || leaveAllowance.total_days < numberOfDays) {
+          if (leaveAllowance.total_days === 0 || leaveAllowance.total_days < numberOfDays) {
             return res.status(401).json({ error: 'Jatah cuti tidak cukup' });
           }
           reductionAmount = numberOfDays
@@ -522,7 +530,7 @@ const leaveSubmissionController = {
         if (leaveType?.is_emergency === 1) {
           const leaveTypeTotalDays = leaveType.total_days ?? 0;
           const extraDay = numberOfDays - leaveTypeTotalDays;
-          if (leaveAllowance.total_days === null || leaveAllowance.total_days === 0 || leaveAllowance.total_days < extraDay) {
+          if (leaveAllowance.total_days < extraDay) {
             return res.status(401).json({ error: 'Jatah cuti tidak cukup' });
           }
           reductionAmount = extraDay
@@ -594,6 +602,10 @@ const leaveSubmissionController = {
           return res.status(404).json({ error: 'leave allowance not found' });
         }
 
+        if (leaveAllowance.total_days === null) {
+          return res.status(404).json({ error: 'leave allowance not found' });
+        }
+
         let reductionAmount = 0
         if (leave_type === 1 || leave_type === "1") {
           if (leaveAllowance.total_days === null || leaveAllowance.total_days === 0 || leaveAllowance.total_days < numberOfDays) {
@@ -605,7 +617,7 @@ const leaveSubmissionController = {
         if (leaveType?.is_emergency === 1) {
           const leaveTypeTotalDays = leaveType.total_days ?? 0;
           const extraDay = numberOfDays - leaveTypeTotalDays;
-          if (leaveAllowance.total_days === null || leaveAllowance.total_days === 0 || leaveAllowance.total_days < extraDay) {
+          if (leaveAllowance.total_days < extraDay) {
             return res.status(401).json({ error: 'Jatah cuti tidak cukup' });
           }
           reductionAmount = extraDay
@@ -980,8 +992,16 @@ const leaveSubmissionController = {
     
         const parsedPage = parseInt(page as string) || 1;
         const parsedLimit = parseInt(limit as string) || submisssionCount.count;
+        const token = req.headers.authorization?.split(' ')[1];
     
-        // Validasi sort_by dan sort_field
+        if (!token) {
+          return res.status(401).json({ error: 'No token provided' });
+        }
+      
+        const decoded = jwt.verify(token, 'your_secret_key') as { role: string };
+         
+        const role = decoded.role;
+    
         const validSortBy = ['asc', 'desc'];
         const isValidSortBy = validSortBy.includes(sort_by);
         const isValidSortField = typeof sort_field === 'string' && sort_field !== '';
@@ -1003,7 +1023,7 @@ const leaveSubmissionController = {
           include: [
             {
               model: User,
-              attributes: ['name', 'position', 'department', 'telephone'],
+              attributes: ['name', 'position', 'department', 'telephone', 'role'],
             },
             {
               model: LeaveType,
@@ -1020,6 +1040,24 @@ const leaveSubmissionController = {
             },
           ],
         };
+
+        if (role === 'hr') {
+              // Menambahkan kondisi where pada include User
+              if (Array.isArray(options.include)) {
+                  const userInclude = options.include.find(
+                      (include): include is Includeable & { model: typeof User, where?: any } =>
+                          typeof include === 'object' && 'model' in include && include.model === User
+                  );
+
+                  if (userInclude) {
+                      userInclude.where = {
+                          ...userInclude.where,
+                          role: { [Op.ne]: 'hr' }
+                      };
+                  }
+              }
+          
+        }
     
         const { rows, count } = await LeaveSubmission.findAndCountAll(options);
     

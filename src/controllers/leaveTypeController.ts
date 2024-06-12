@@ -22,6 +22,16 @@ const leaveTypeController = {
           whereClause.id = { [Op.ne]: 10 }; 
         }
 
+        if (gender === 'female') {
+          whereClause.id = {
+            [Op.and]: [
+              { [Op.ne]: 7 },
+              { [Op.ne]: 11 }
+            ]
+          };
+        }
+        
+
         if (req.query.is_emergency !== undefined) {
           const is_emergency = req.query.is_emergency as string;
           whereClause.is_emergency = is_emergency; 
