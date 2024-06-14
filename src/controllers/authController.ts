@@ -3,10 +3,10 @@ import jwt from 'jsonwebtoken';
 import User from "../db/models/userModel";
 import bcrypt from 'bcrypt'
 import { validationResult } from 'express-validator';
-
 import nodemailer from 'nodemailer';
 import crypto from 'crypto';
 import { Op } from 'sequelize';
+import AppConstants from '../AppConstants';
 require('dotenv').config();
 
 const authController = {
@@ -20,37 +20,32 @@ const authController = {
           
           const { email, password } = req.body;
       
-          // Temukan pengguna berdasarkan email
           const user = await User.findOne({ where: { email: email } });
       
           if (!user || user.is_deleted === 1) {
-            res.status(404).json({ error: 'User not found' });
+            res.status(404).json({ error: AppConstants.ErrorMessages.User.USER_NOT_FOUND });
             return;
           }
       
-          // Bandingkan kata sandi yang diberikan dengan kata sandi yang di-hash dalam database menggunakan bcrypt
           const isMatch = await bcrypt.compare(password, user.password);
       
           if (!isMatch) {
-            res.status(401).json({ error: 'Incorrect password' });
+            res.status(401).json({ error: AppConstants.ErrorMessages.Auth.INCORRECT_PASSWORD });
             return;
           }
       
-          // Buat payload untuk token JWT
           const payload = {
             userId: user.id,
             role: user.role,
             gender: user.gender
           };
       
-          // Buat token JWT menggunakan payload dan secret key
           const token = jwt.sign(payload, 'your_secret_key', { expiresIn: '24h' });
       
-          // Kirim token JWT sebagai respons
           res.status(200).json({ token });
         } catch (error) {
-          console.error('Error during login:', error);
-          res.status(500).json({ error: 'Unable to process login' });
+          console.error(AppConstants.ErrorMessages.Auth.ERROR_LOGIN, error);
+          res.status(500).json({ error: AppConstants.ErrorMessages.Auth.UNABLE_LOGIN });
         }
     },
 
@@ -61,7 +56,7 @@ const authController = {
             const token = req.headers.authorization?.split(' ')[1];
 
             if (!token) {
-                return res.status(401).json({ error: 'No token provided' });
+                return res.status(401).json({ error: AppConstants.ErrorMessages.Other.NO_TOKEN });
             }
 
             const decoded = jwt.verify(token, 'your_secret_key') as { userId: number };
@@ -71,19 +66,19 @@ const authController = {
             const user = await User.findByPk(user_id);
 
             if (!user || user.is_deleted === 1) {
-            return res.status(404).json({ error: 'User not found' });
+            return res.status(404).json({ error: AppConstants.ErrorMessages.User.USER_NOT_FOUND });
             }
 
             // Verifikasi password saat ini
             const isMatch = await bcrypt.compare(currentPassword, user.password);
 
             if (!isMatch) {
-            return res.status(401).json({ error: 'Current password is incorrect' });
+            return res.status(401).json({ error: AppConstants.ErrorMessages.Auth.CURRENT_PASSWORD_INCORRECT});
             }
 
             // Validasi konfirmasi password
             if (newPassword !== confirmPassword) {
-            return res.status(400).json({ error: 'New password and confirm password do not match' });
+            return res.status(400).json({ error: AppConstants.ErrorMessages.Auth.ERROR_CONFIRM_PASSWORD });
             }
 
             // Hash password baru sebelum menyimpannya
@@ -93,10 +88,10 @@ const authController = {
             user.password = hashedNewPassword;
             await user.save();
 
-            res.status(200).json({ message: 'Password changed successfully' });
+            res.status(200).json({ message: AppConstants.ErrorMessages.Auth.CHANGE_PASSWORD_SUCCES });
         } catch (error) {
-            console.error('Error changing password:', error);
-            res.status(500).json({ error: 'Internal server error' });
+            console.error(AppConstants.ErrorMessages.Auth.ERROR_CHAGING_PASSWORD, error);
+            res.status(500).json({ error: AppConstants.ErrorMessages.Auth.UNABLE_CHANGING_PASSWORD });
         }
     },
 
@@ -105,14 +100,14 @@ const authController = {
           const { email } = req.body;
 
           if (!email){
-              res.status(400).json('Email is required');
+              res.status(400).json(AppConstants.ErrorMessages.Auth.EMAIL_IS_REQUIRED);
               return;
           }
 
           const user = await User.findOne({ where: { email: email } });
 
           if (!user || user.is_deleted === 1) {
-              res.status(404).json({ error: 'User not found' });
+              res.status(404).json({ error: AppConstants.ErrorMessages.User.USER_NOT_FOUND });
               return;
           }
 
@@ -140,10 +135,10 @@ const authController = {
 
           await transporter.sendMail(mailOptions);
 
-          res.status(200).json({ message: 'Password reset link sent to email' });
+          res.status(200).json({ message: AppConstants.ErrorMessages.Auth.SEND_PASSWORD_RESET_LINK });
       } catch (error) {
-          console.error('Error during password reset request:', error);
-          res.status(500).json({ error: 'Unable to process password reset request' });
+          console.error(AppConstants.ErrorMessages.Auth.ERROR_REQUEST_RESET_PASSWORD, error);
+          res.status(500).json({ error: AppConstants.ErrorMessages.Auth.UNABLE_TO_REQUEST_RESET_PASSWORD });
       }
     },
 
@@ -158,24 +153,24 @@ const authController = {
             });
 
             if (!user) {
-                res.status(400).json({ error: 'Password reset token is invalid or has expired' });
+                res.status(400).json({ error: AppConstants.ErrorMessages.Auth.RESET_TOKEN_INVALID });
                 return;
             }
 
             if (!user.resetToken) {
-                res.status(401).json({ error: 'No token provided' });
+                res.status(401).json({ error: AppConstants.ErrorMessages.Other.NO_TOKEN });
                 return
             }
 
             const isMatch = bcrypt.compare(token, user.resetToken);
 
             if (!isMatch) {
-                res.status(400).json({ error: 'Password reset token is invalid or has expired' });
+                res.status(400).json({ error: AppConstants.ErrorMessages.Auth.RESET_TOKEN_INVALID });
                 return;
             }
 
             if (newPassword !== confirmPassword) {
-                res.status(400).json({ error: 'New password and confirm password do not match' });
+                res.status(400).json({ error: AppConstants.ErrorMessages.Auth.ERROR_CONFIRM_PASSWORD });
                 return;
             }
 
@@ -185,10 +180,10 @@ const authController = {
             user.resetTokenExpires = null;
             await user.save();
 
-            res.status(200).json({ message: 'Password has been reset' });
+            res.status(200).json({ message: AppConstants.ErrorMessages.Auth.RESET_PASSWORD_SUCCES });
         } catch (error) {
-            console.error('Error during password reset:', error);
-            res.status(500).json({ error: 'Unable to process password reset' });
+            console.error(AppConstants.ErrorMessages.Auth.ERROR_REQUEST_RESET_PASSWORD, error);
+            res.status(500).json({ error: AppConstants.ErrorMessages.Auth.UNABLE_TO_REQUEST_RESET_PASSWORD });
         }
     }
 }

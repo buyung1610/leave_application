@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import LeaveType from "../db/models/leaveTypeModel";
 import jwt from "jsonwebtoken";
 import { Op } from "sequelize";
+import AppConstants from "../AppConstants";
 
 const leaveTypeController = {
     getFromGender: async (req: Request, res: Response) => {
@@ -9,7 +10,7 @@ const leaveTypeController = {
         const token = req.headers.authorization?.split(' ')[1];
     
         if (!token) {
-          return res.status(401).json({ error: 'No token provided' });
+          return res.status(401).json({ error: AppConstants.ErrorMessages.Other.NO_TOKEN });
         }
     
         const decoded = jwt.verify(token, 'your_secret_key') as { gender: string };
@@ -18,11 +19,11 @@ const leaveTypeController = {
         console.log(gender)
         let whereClause: any = {}; 
     
-        if (gender === 'male') {
+        if (gender === AppConstants.Gender.MALE) {
           whereClause.id = { [Op.ne]: 10 }; 
         }
 
-        if (gender === 'female') {
+        if (gender === AppConstants.Gender.FEMALE) {
           whereClause.id = {
             [Op.and]: [
               { [Op.ne]: 7 },
@@ -40,8 +41,8 @@ const leaveTypeController = {
         const types = await LeaveType.findAll({ where: whereClause });
         res.status(200).json(types);
       } catch (error) {
-        console.error('Error while fetching users:', error);
-        res.status(500).json({ error: 'Unable to fetch users' });
+        console.error(AppConstants.ErrorMessages.LeaveType.ERROR_FETCHING, error);
+        res.status(500).json({ error: AppConstants.ErrorMessages.LeaveType.UNABLE_FETCH });
       }
     },
 
@@ -57,8 +58,8 @@ const leaveTypeController = {
         const types = await LeaveType.findAll({ where: whereClause });
         res.status(200).json(types);
       } catch (error) {
-        console.error('Error while fetching users:', error);
-        res.status(500).json({ error: 'Unable to fetch users' });
+        console.error(AppConstants.ErrorMessages.LeaveType.ERROR_FETCHING, error);
+        res.status(500).json({ error: AppConstants.ErrorMessages.LeaveType.UNABLE_FETCH });
       }
     },
 
