@@ -44,8 +44,8 @@ const authController = {
       
           res.status(200).json({ token });
         } catch (error) {
-          console.error(AppConstants.ErrorMessages.Auth.ERROR_LOGIN, error);
-          res.status(500).json({ error: AppConstants.ErrorMessages.Auth.UNABLE_LOGIN });
+          console.error(AppConstants.ErrorMessages.Other.ERROR_DETAIL, error);
+          res.status(500).json({ error: AppConstants.ErrorMessages.Other.INTERNAL_SERVER_ERROR });
         }
     },
 
@@ -90,8 +90,8 @@ const authController = {
 
             res.status(200).json({ message: AppConstants.ErrorMessages.Auth.CHANGE_PASSWORD_SUCCES });
         } catch (error) {
-            console.error(AppConstants.ErrorMessages.Auth.ERROR_CHAGING_PASSWORD, error);
-            res.status(500).json({ error: AppConstants.ErrorMessages.Auth.UNABLE_CHANGING_PASSWORD });
+            console.error(AppConstants.ErrorMessages.Other.ERROR_DETAIL, error);
+            res.status(500).json({ error: AppConstants.ErrorMessages.Other.INTERNAL_SERVER_ERROR });
         }
     },
 
@@ -136,10 +136,10 @@ const authController = {
           await transporter.sendMail(mailOptions);
 
           res.status(200).json({ message: AppConstants.ErrorMessages.Auth.SEND_PASSWORD_RESET_LINK });
-      } catch (error) {
-          console.error(AppConstants.ErrorMessages.Auth.ERROR_REQUEST_RESET_PASSWORD, error);
-          res.status(500).json({ error: AppConstants.ErrorMessages.Auth.UNABLE_TO_REQUEST_RESET_PASSWORD });
-      }
+        } catch (error) {
+            console.error(AppConstants.ErrorMessages.Other.ERROR_DETAIL, error);
+            res.status(500).json({ error: AppConstants.ErrorMessages.Other.INTERNAL_SERVER_ERROR });
+        }
     },
 
     resetPassword: async (req: Request, res: Response): Promise<void> => {
@@ -182,8 +182,8 @@ const authController = {
 
             res.status(200).json({ message: AppConstants.ErrorMessages.Auth.RESET_PASSWORD_SUCCES });
         } catch (error) {
-            console.error(AppConstants.ErrorMessages.Auth.ERROR_REQUEST_RESET_PASSWORD, error);
-            res.status(500).json({ error: AppConstants.ErrorMessages.Auth.UNABLE_TO_REQUEST_RESET_PASSWORD });
+            console.error(AppConstants.ErrorMessages.Other.ERROR_DETAIL, error);
+            res.status(500).json({ error: AppConstants.ErrorMessages.Other.INTERNAL_SERVER_ERROR });
         }
     }
 }

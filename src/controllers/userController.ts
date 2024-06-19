@@ -4,17 +4,16 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken'
 import LeaveAllowance from "../db/models/leaveAllowanceModel";
 import { validationResult } from "express-validator";
-import { OrderItem } from "sequelize";
+import { Op, OrderItem, Sequelize } from "sequelize";
 import { format } from "date-fns";
 
 const userController = {
   getAllUser: async (req: Request, res: Response) => {
     try {
-      const { page, limit } = req.query;
+      const { page, limit, search } = req.query;
       const sort_by = req.query.sort_by as string || 'asc';
       const sort_field = req.query.sort_field as string || "id";
-      console.log(sort_field)
-
+  
       const user = await User.findAndCountAll()
   
       const parsedPage = parseInt(page as string) || 1;
@@ -23,7 +22,7 @@ const userController = {
       // Validasi sort_by dan sort_field
       const validSortBy = ['asc', 'desc'];
       const isValidSortBy = validSortBy.includes(sort_by as string);
-      const isValidSortField = typeof sort_field === 'string' && sort_field !== ''; // Memastikan sort_field ada dan tidak kosong
+      const isValidSortField = typeof sort_field === 'string' && sort_field !== '';
   
       if (!isValidSortBy || !isValidSortField) {
         return res.status(400).json({ error: 'Invalid sort_by or sort_field' });
@@ -34,18 +33,20 @@ const userController = {
       let order: OrderItem[] = [];
       if (isValidSortField) {
         if (sort_field === 'total_days') {
-          // Jika sort_field adalah 'total_days', order akan diganti
           order = [[{ model: LeaveAllowance, as: 'leaveAllowance' }, sort_field as string, sort_by as string]];
         } else {
-          // Jika sort_field bukan 'total_days', gunakan sort_field yang diberikan pengguna
           order = [[sort_field as string, sort_by as string]];
         }
       }
-
+  
+      const whereCondition: any = { is_deleted: 0 };
+  
+      if (search && typeof search === 'string') {
+        whereCondition.name = { [Op.startsWith]: search };
+      }
+  
       const users = await User.findAndCountAll({
-        where: {
-          is_deleted: 0
-        },
+        where: whereCondition,
         limit: parsedLimit,
         offset: offset,
         order: order,
@@ -59,25 +60,22 @@ const userController = {
         raw: true
       });
   
-      
       const modifiedUsers = users.rows.map((user: any) => {
-        // Buat salinan objek user tanpa properti leaveAllowance.total_days
         const { 'leaveAllowance.total_days': total_days, ...userWithoutLeaveAllowance } = user;
   
-        // Format created_at dan updated_at menggunakan date-fns
         const formattedCreatedAt = user.created_at ? format(new Date(user.created_at), 'yyyy-MM-dd HH:mm:ss') : null;
         const formattedUpdatedAt = user.updated_at ? format(new Date(user.updated_at), 'yyyy-MM-dd HH:mm:ss') : null;
   
         return {
-          ...userWithoutLeaveAllowance, // Salin semua properti kecuali leaveAllowance
-          total_days: total_days, // Gunakan nilai total_days di luar leaveAllowance
-          created_at: formattedCreatedAt, // Tambahkan formatted created_at
-          updated_at: formattedUpdatedAt // Tambahkan formatted updated_at
+          ...userWithoutLeaveAllowance,
+          total_days: total_days,
+          created_at: formattedCreatedAt,
+          updated_at: formattedUpdatedAt
         };
       });
-
+  
       const totalPages = Math.ceil(users.count / parsedLimit);
-
+  
       res.status(200).json({
         count: user.count,
         users: modifiedUsers,
@@ -218,7 +216,7 @@ const userController = {
   updateUserData: async (req: Request, res: Response) => {
     try {
       const userIdParams = req.params.id;
-      const { name, email, position, department, telephone, join_date, gender, role, leave_allowance } = req.body;
+      const { name, email, position, department, telephone, join_date, gender, role } = req.body;
       const token = req.headers.authorization?.split(' ')[1];
 
       if (!token) {
@@ -260,16 +258,19 @@ const userController = {
       }
 
       // Hitung jatah cuti berdasarkan perbedaan bulan antara join_date dan tanggal saat ini
-      const joinDate = new Date(join_date); // Konversi join_date ke objek Date
+      const joinDate = new Date(join_date); 
+      const userJoinDate = new Date(user.join_date);
+      const joinDateYear = joinDate.getFullYear();
+      const userJoinDateYear = userJoinDate.getFullYear();
       const currentDate = new Date();
+      const currentYear = new Date().getFullYear();
       const diffYears = currentDate.getFullYear() - joinDate.getFullYear();
       const diffMonths = diffYears * 12 + (currentDate.getMonth() - joinDate.getMonth());
 
-      let leaveAllowance = 0;
+      
 
-      if ( leave_allowance === 0 ){
-        leaveAllowance = 0
-      } else if ( !leave_allowance || typeof leave_allowance !== 'number' ){
+      if (userJoinDateYear !== joinDateYear){
+        let leaveAllowance = 0;
         if (diffMonths >= 72) {
           leaveAllowance = 17;
         } else if (diffMonths >= 60) {
@@ -285,20 +286,46 @@ const userController = {
         } else {
           leaveAllowance = 0;
         }
-      } else {
-        leaveAllowance = leave_allowance
-      }
+      
+        const leaveStats = await User.findAll({
+          attributes: [
+            [Sequelize.literal(`(
+                SELECT SUM(b.reduction_amount)
+                FROM leave_submissions AS b
+                WHERE b.is_deleted = 0
+                AND b.status = 'diterima'
+                AND YEAR(b.start_date) = '${currentYear.toString()}'
+                AND b.user_id = ${userIdParams}
+            )`), 'jumlah_hari_cuti']
+          ],
+          where: {
+            role: {
+              [Op.ne]: 'owner'
+            },
+          },
+        });
+      
+        // Debugging log to check the result of leaveStats
+        console.log("Leave Stats: ", leaveStats);
+      
+        const jumlahHariCuti = leaveStats.length > 0 ? leaveStats[0].get('jumlah_hari_cuti') : 0;
+        const jumlahHariCutiInt = jumlahHariCuti ? parseInt(jumlahHariCuti.toString(), 10) : 0;
       
 
-      // Simpan data jatah cuti untuk pengguna yang diperbarui
-      const [newLeaveAllowance] = await LeaveAllowance.update({
-        total_days: leaveAllowance,
-        updated_at: new Date(),
-        updated_by: user_id,
-      },{ where: { user_id: userIdParams } });
+        // Pengurangan leaveAllowance dengan jumlahHariCuti
+        const updatedLeaveAllowance = leaveAllowance - jumlahHariCutiInt;
 
-      if (newLeaveAllowance === 0) {
-        return res.status(404).json({ error: 'leave allowance not found' });
+        // Simpan data jatah cuti untuk pengguna yang diperbarui
+        const [newLeaveAllowance] = await LeaveAllowance.update({
+          total_days: updatedLeaveAllowance,
+          total_days_copy: leaveAllowance,
+          updated_at: new Date(),
+          updated_by: user_id,
+        },{ where: { user_id: userIdParams } });
+
+        if (newLeaveAllowance === 0) {
+          return res.status(404).json({ error: 'leave allowance not found' });
+        }
       }
 
       res.status(200).json({ message: 'User data updated successfully' });

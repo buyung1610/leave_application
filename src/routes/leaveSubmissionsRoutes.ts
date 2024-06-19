@@ -32,32 +32,6 @@ router.put("/:id", verifyToken, [
   body('leave_type').notEmpty().withMessage('Leave type is required'),
   body('emergency_call').notEmpty().withMessage('Emergency call is required'),
   body('description').notEmpty().withMessage('Description is required'),
-  body('attachment').custom((value, { req }) => {
-    const startDate = new Date(req.body.start_date);
-    const endDate = new Date(req.body.end_date);
-    
-    const calculateWorkingDays = (start: Date, end: Date): number => {
-      let totalDays = 0;
-      let currentDate = new Date(start);
-
-      while (currentDate <= end) {
-        const dayOfWeek = currentDate.getDay();
-        if (dayOfWeek !== 0 && dayOfWeek !== 6) { // 0 = Minggu, 6 = Sabtu
-          totalDays++;
-        }
-        currentDate.setDate(currentDate.getDate() + 1);
-      }
-
-      return totalDays;
-    };
-
-    const numberOfDays = calculateWorkingDays(startDate, endDate);
-
-    if ((req.body.leave_type === '2' || req.body.leave_type === 2) && numberOfDays > 1 && (!value || typeof value !== 'string' || value.trim() === "")) {
-      throw new Error('Attachment is required');
-    }
-    return true;
-  }),
 ], submissionController.updateSubmission);
 
 router.post("/:id", verifyToken,[
@@ -66,30 +40,6 @@ router.post("/:id", verifyToken,[
   body('leave_type').notEmpty().withMessage('Leave type is required'),
   body('emergency_call').notEmpty().withMessage('Emergency call is required'),
   body('description').notEmpty().withMessage('Description is required'),
-  body('attachment').custom((value, { req }) => {
-      const startDate = new Date(req.body.start_date);
-      const endDate = new Date(req.body.end_date);
-      const calculateWorkingDays = (start: Date, end: Date): number => {
-          let totalDays = 0;
-          let currentDate = new Date(start);
-    
-          while (currentDate <= end) {
-            const dayOfWeek = currentDate.getDay();
-            if (dayOfWeek !== 0 && dayOfWeek !== 6) { // 0 = Minggu, 6 = Sabtu
-              totalDays++;
-            }
-            currentDate.setDate(currentDate.getDate() + 1);
-          }
-    
-          return totalDays;
-        };
-    
-        const numberOfDays = calculateWorkingDays(startDate, endDate);
-      if (req.body.leave_type === '2' || req.body.leave_type === 2 && numberOfDays > 1 && (!value || typeof value !== 'string' || value.trim() === "")) {
-          throw new Error('Attachment is required');
-      }
-      return true;
-  }),
 ], submissionController.createEmployeeSubmission);
 
 router.post("/", verifyToken,[
@@ -98,30 +48,6 @@ router.post("/", verifyToken,[
   body('leave_type').notEmpty().withMessage('Leave type is required'),
   body('emergency_call').notEmpty().withMessage('Emergency call is required'),
   body('description').notEmpty().withMessage('Description is required'),
-  body('attachment').custom((value, { req }) => {
-      const startDate = new Date(req.body.start_date);
-      const endDate = new Date(req.body.end_date);
-      const calculateWorkingDays = (start: Date, end: Date): number => {
-          let totalDays = 0;
-          let currentDate = new Date(start);
-    
-          while (currentDate <= end) {
-            const dayOfWeek = currentDate.getDay();
-            if (dayOfWeek !== 0 && dayOfWeek !== 6) { // 0 = Minggu, 6 = Sabtu
-              totalDays++;
-            }
-            currentDate.setDate(currentDate.getDate() + 1);
-          }
-    
-          return totalDays;
-        };
-    
-        const numberOfDays = calculateWorkingDays(startDate, endDate);
-      if (req.body.leave_type === '2' || req.body.leave_type === 2 && numberOfDays > 1 && (!value || typeof value !== 'string' || value.trim() === "")) {
-          throw new Error('Attachment is required');
-      }
-      return true;
-  }),
 ], submissionController.createSubmission);
 
 router.get("/", verifyToken, submissionController.getAllSubmission);

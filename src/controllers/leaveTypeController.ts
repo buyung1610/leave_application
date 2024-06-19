@@ -5,50 +5,9 @@ import { Op } from "sequelize";
 import AppConstants from "../AppConstants";
 
 const leaveTypeController = {
-    getFromGender: async (req: Request, res: Response) => {
-      try {
-        const token = req.headers.authorization?.split(' ')[1];
-    
-        if (!token) {
-          return res.status(401).json({ error: AppConstants.ErrorMessages.Other.NO_TOKEN });
-        }
-    
-        const decoded = jwt.verify(token, 'your_secret_key') as { gender: string };
-        const gender = decoded.gender;
-        
-        console.log(gender)
-        let whereClause: any = {}; 
-    
-        if (gender === AppConstants.Gender.MALE) {
-          whereClause.id = { [Op.ne]: 10 }; 
-        }
-
-        if (gender === AppConstants.Gender.FEMALE) {
-          whereClause.id = {
-            [Op.and]: [
-              { [Op.ne]: 7 },
-              { [Op.ne]: 11 }
-            ]
-          };
-        }
-        
-
-        if (req.query.is_emergency !== undefined) {
-          const is_emergency = req.query.is_emergency as string;
-          whereClause.is_emergency = is_emergency; 
-        }
-    
-        const types = await LeaveType.findAll({ where: whereClause });
-        res.status(200).json(types);
-      } catch (error) {
-        console.error(AppConstants.ErrorMessages.LeaveType.ERROR_FETCHING, error);
-        res.status(500).json({ error: AppConstants.ErrorMessages.LeaveType.UNABLE_FETCH });
-      }
-    },
-
     getAll: async (req: Request, res: Response) => {
       try {
-        let whereClause: any = {}; 
+        let whereClause: any = { is_deleted: 0 }; 
         
         if (req.query.is_emergency !== undefined) {
           const is_emergency = req.query.is_emergency as string;
@@ -58,8 +17,8 @@ const leaveTypeController = {
         const types = await LeaveType.findAll({ where: whereClause });
         res.status(200).json(types);
       } catch (error) {
-        console.error(AppConstants.ErrorMessages.LeaveType.ERROR_FETCHING, error);
-        res.status(500).json({ error: AppConstants.ErrorMessages.LeaveType.UNABLE_FETCH });
+        console.error(AppConstants.ErrorMessages.Other.ERROR_DETAIL, error);
+        res.status(500).json({ error: AppConstants.ErrorMessages.Other.INTERNAL_SERVER_ERROR });
       }
     },
 
@@ -69,7 +28,7 @@ const leaveTypeController = {
           const token = req.headers.authorization?.split(' ')[1];
 
           if (!token) {
-            return res.status(401).json({ error: 'No token provided' });
+            return res.status(401).json({ error: AppConstants.ErrorMessages.Other.NO_TOKEN });
           }
 
           const decoded = jwt.verify(token, 'your_secret_key') as { userId: number };
@@ -82,10 +41,10 @@ const leaveTypeController = {
             created_by: user_id
           })
 
-          res.status(201).json({ message: 'leave type created successfully' });
+          res.status(201).json({ message: AppConstants.ErrorMessages.LeaveType.CREATE_SUCCES });
         } catch (error) {
-          console.error('Error creating user:', error);
-          res.status(500).json({ error: 'Internal server error' });
+          console.error(AppConstants.ErrorMessages.Other.ERROR_DETAIL, error);
+          res.status(500).json({ error: AppConstants.ErrorMessages.Other.INTERNAL_SERVER_ERROR });
         }
     },
 
@@ -96,7 +55,7 @@ const leaveTypeController = {
         const token = req.headers.authorization?.split(' ')[1];
 
         if (!token) {
-          return res.status(401).json({ error: 'No token provided' });
+          return res.status(401).json({ error: AppConstants.ErrorMessages.Other.NO_TOKEN });
         }
 
         const decoded = jwt.verify(token, 'your_secret_key') as { userId: number };
@@ -111,13 +70,13 @@ const leaveTypeController = {
         }, { where: { id: leaveTypeId } });
   
         if (updatedRowsCount === 0) {
-          res.status(404).json({ error: 'Leave type not found' });
+          res.status(404).json({ error: AppConstants.ErrorMessages.LeaveType.NOT_FOUND });
         } else {
-          res.status(200).json({ message: 'Leave type data updated successfully' });
+          res.status(200).json({ message: AppConstants.ErrorMessages.LeaveType.UPDATE_SUCCES });
         }
       } catch (error) {
-        console.error('Error while updating leave type :', error);
-        res.status(500).json({ error: 'Unable to update leave type' });
+        console.error(AppConstants.ErrorMessages.Other.ERROR_DETAIL, error);
+        res.status(500).json({ error: AppConstants.ErrorMessages.Other.INTERNAL_SERVER_ERROR });
       }
     },
 
@@ -129,13 +88,14 @@ const leaveTypeController = {
         const deletedRowsCount = await LeaveType.destroy({ where: { id: leaveTypeId } });
   
         if (deletedRowsCount === 0) {
-          res.status(404).json({ error: 'Leave type not found' });
+          res.status(404).json({ error: AppConstants.ErrorMessages.LeaveType.NOT_FOUND
+           });
         } else {
-          res.status(200).json({ message: 'Leave type deleted successfully' });
+          res.status(200).json({ message: AppConstants.ErrorMessages.LeaveType.DELETE_SUCCES });
         }
       } catch (error) {
-        console.error('Error while deleting leave type:', error);
-        res.status(500).json({ error: 'Unable to delete leave type' });
+        console.error(AppConstants.ErrorMessages.Other.ERROR_DETAIL, error);
+        res.status(500).json({ error: AppConstants.ErrorMessages.Other.INTERNAL_SERVER_ERROR });
       }
     }
     

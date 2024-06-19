@@ -188,8 +188,8 @@ const leaveSubmissionController = {
             submissions,
           });
         } catch (error) {
-          console.error(AppConstants.ErrorMessages.Submission.ERROR_FETCHING_SUBMISSIONS, error);
-          res.status(500).json({ error: AppConstants.ErrorMessages.Submission.UNABLE_FETCH_SUBMISSIONS });
+          console.error(AppConstants.ErrorMessages.Other.ERROR_DETAIL, error);
+          res.status(500).json({ error: AppConstants.ErrorMessages.Other.INTERNAL_SERVER_ERROR });
         }
     },
 
@@ -252,8 +252,8 @@ const leaveSubmissionController = {
           res.status(404).json({ error: AppConstants.ErrorMessages.Submission.SUBMISSION_NOT_FOUND });
         }
       } catch (error) {
-        console.error(AppConstants.ErrorMessages.Submission.ERROR_FETCHING_SUBMISSIONS, error);
-        res.status(500).json({ error: AppConstants.ErrorMessages.Submission.UNABLE_FETCH_SUBMISSIONS });
+        console.error(AppConstants.ErrorMessages.Other.ERROR_DETAIL, error);
+        res.status(500).json({ error: AppConstants.ErrorMessages.Other.INTERNAL_SERVER_ERROR });
       }
     },
 
@@ -363,8 +363,8 @@ const leaveSubmissionController = {
           res.status(404).json({ error: AppConstants.ErrorMessages.Submission.SUBMISSION_NOT_FOUND });
         }
       } catch (error) {
-        console.error(AppConstants.ErrorMessages.Submission.ERROR_FETCHING_SUBMISSIONS, error);
-        res.status(500).json({ error: AppConstants.ErrorMessages.Submission.UNABLE_FETCH_SUBMISSIONS });
+        console.error(AppConstants.ErrorMessages.Other.ERROR_DETAIL, error);
+        res.status(500).json({ error: AppConstants.ErrorMessages.Other.INTERNAL_SERVER_ERROR });
       }
     },
 
@@ -407,7 +407,7 @@ const leaveSubmissionController = {
         const leaveAllowance = await LeaveAllowance.findOne({ where: { user_id: user_id, is_deleted: 0 } });
 
         if (!leaveType) {
-          return res.status(404).json({ error: AppConstants.ErrorMessages.LeaveType.LEAVE_TYPE_NOT_FOUND });
+          return res.status(404).json({ error: AppConstants.ErrorMessages.LeaveType.NOT_FOUND });
         }
 
         if (!leaveAllowance) {
@@ -457,8 +457,8 @@ const leaveSubmissionController = {
     
         return res.status(201).json({ message: AppConstants.ErrorMessages.Submission.SUBMISSIONS_CREATED_SUCCES });
       } catch (error) {
-        console.error(AppConstants.ErrorMessages.Submission.ERROR_FETCHING_SUBMISSIONS, error);
-        return res.status(500).json({ error: AppConstants.ErrorMessages.Submission.UNABLE_FETCH_SUBMISSIONS });
+        console.error(AppConstants.ErrorMessages.Other.ERROR_DETAIL, error);
+        res.status(500).json({ error: AppConstants.ErrorMessages.Other.INTERNAL_SERVER_ERROR });
       }
     },
 
@@ -508,7 +508,7 @@ const leaveSubmissionController = {
         const leaveAllowance = await LeaveAllowance.findOne({ where: { user_id: userIdParams, is_deleted: 0 } });
 
         if (!leaveType) {
-          return res.status(404).json({ error: AppConstants.ErrorMessages.LeaveType.LEAVE_TYPE_NOT_FOUND });
+          return res.status(404).json({ error: AppConstants.ErrorMessages.LeaveType.NOT_FOUND });
         }
 
         if (!leaveAllowance) {
@@ -562,15 +562,15 @@ const leaveSubmissionController = {
     
         return res.status(201).json({ message: AppConstants.ErrorMessages.Submission.SUBMISSIONS_CREATED_SUCCES });
       } catch (error) {
-        console.error(AppConstants.ErrorMessages.Submission.ERROR_FETCHING_SUBMISSIONS, error);
-        return res.status(500).json({ error: AppConstants.ErrorMessages.Submission.UNABLE_FETCH_SUBMISSIONS });
+        console.error(AppConstants.ErrorMessages.Other.ERROR_DETAIL, error);
+        res.status(500).json({ error: AppConstants.ErrorMessages.Other.INTERNAL_SERVER_ERROR });
       }
     },
     
     updateSubmission: async (req: Request, res: Response) => {
       try {
         const submissionId = req.params.id;
-        const { start_date, end_date, leave_type, emergency_call, description, attachment,force_submit } = req.body;
+        const { start_date, end_date, leave_type, emergency_call, description, attachment, force_submit } = req.body;
         const token = req.headers.authorization?.split(' ')[1];
     
         if (!token) {
@@ -622,7 +622,7 @@ const leaveSubmissionController = {
             }
           }
           reductionAmount = numberOfDays
-        }        
+        } 
 
         if (leaveType?.is_emergency === 1) {
           const leaveTypeTotalDays = leaveType.total_days ?? 0;
@@ -656,66 +656,93 @@ const leaveSubmissionController = {
           // res.status(200).json(submission);
         }
       } catch (error) {
-        console.error(AppConstants.ErrorMessages.Submission.ERROR_FETCHING_SUBMISSIONS, error);
-        res.status(500).json({ error: AppConstants.ErrorMessages.Submission.UNABLE_FETCH_SUBMISSIONS });
+        console.error(AppConstants.ErrorMessages.Other.ERROR_DETAIL, error);
+        res.status(500).json({ error: AppConstants.ErrorMessages.Other.INTERNAL_SERVER_ERROR });
       }
     },
 
     acceptSubmission: async (req: Request, res: Response) => {
       try {
-        const submissionId = req.params.id
+        const submissionId = req.params.id;
+        const reduction_amount = req.body.reduction_amount;
         const token = req.headers.authorization?.split(' ')[1];
-
+    
         if (!token) {
           return res.status(401).json({ error: AppConstants.ErrorMessages.Other.NO_TOKEN });
         }
-
+    
         const decoded = jwt.verify(token, 'your_secret_key') as { userId: number };
         const user_id = decoded.userId;
-
+    
         const submission = await LeaveSubmission.findOne({ where: { id: submissionId, is_deleted: 0 } });
-
+    
         if (!submission) {
           return res.status(404).json({ error: AppConstants.ErrorMessages.Submission.SUBMISSION_NOT_FOUND });
-        } else if (submission.status === AppConstants.Status.DITERIMA) {
+        }
+    
+        if (submission.status === AppConstants.Status.DITERIMA) {
           return res.status(200).json({ error: AppConstants.ErrorMessages.Submission.SUBMISSION_ALREADY_ACCEPTED });
-        } else if (submission.status === AppConstants.Status.DITOLAK) {
+        }
+    
+        if (submission.status === AppConstants.Status.DITOLAK) {
           return res.status(200).json({ error: AppConstants.ErrorMessages.Submission.SUBMISSION_ALREADY_REJECTED });
-        } else if (submission.status === AppConstants.Status.PENDING) {
-
+        }
+    
+        if (submission.status === AppConstants.Status.PENDING) {
           const leaveAllowances = await LeaveAllowance.findOne({ where: { user_id: submission.user_id, is_deleted: 0 } });
+    
           if (!leaveAllowances) {
             return res.status(500).json({ error: AppConstants.ErrorMessages.LeaveAllowance.LEAVE_ALLOWANCE_NOT_FOUND });
           }
-
-          const [updateSubmission] = await LeaveSubmission.update({
-            status: 'Diterima',
-            approver_user_id: user_id,
-          }, {where: { id: submissionId, is_deleted: 0 }})
-
-          if (updateSubmission === 0) {
-            res.status(404).json({ error: AppConstants.ErrorMessages.Submission.SUBMISSION_NOT_FOUND });
-          } 
-
+    
+          let reductionAmount;
+    
+          if (submission.leave_type_id === 2) {
+            const [updateSubmission] = await LeaveSubmission.update({
+              reduction_amount: reduction_amount,
+              status: 'Diterima',
+              approver_user_id: user_id,
+            }, { where: { id: submissionId, is_deleted: 0 } });
+    
+            if (updateSubmission === 0) {
+              return res.status(404).json({ error: AppConstants.ErrorMessages.Submission.SUBMISSION_NOT_FOUND });
+            }
+    
+            reductionAmount = reduction_amount;
+          } else {
+            const [updateSubmission] = await LeaveSubmission.update({
+              status: 'Diterima',
+              approver_user_id: user_id,
+            }, { where: { id: submissionId, is_deleted: 0 } });
+    
+            if (updateSubmission === 0) {
+              return res.status(404).json({ error: AppConstants.ErrorMessages.Submission.SUBMISSION_NOT_FOUND });
+            }
+    
+            reductionAmount = submission.reduction_amount;
+          }
+    
           const userId = submission.user_id;
           const leaveAllowance = await LeaveAllowance.findOne({ where: { user_id: userId, is_deleted: 0 } });
+    
           if (!leaveAllowance) {
-            res.status(500).json({ error: AppConstants.ErrorMessages.LeaveAllowance.LEAVE_ALLOWANCE_NOT_FOUND });
-            return;
+            return res.status(500).json({ error: AppConstants.ErrorMessages.LeaveAllowance.LEAVE_ALLOWANCE_NOT_FOUND });
           }
+    
           if (leaveAllowance.total_days === null) {
             return res.status(404).json({ error: AppConstants.ErrorMessages.LeaveAllowance.LEAVE_ALLOWANCE_NOT_FOUND });
           }
-
-          await leaveAllowance.update({ total_days: leaveAllowance.total_days - submission.reduction_amount })
-          
-          res.status(200).json({ message: AppConstants.ErrorMessages.Submission.SUBMISSIONS_UPDATE_SUCCES });
+    
+          await leaveAllowance.update({ total_days: leaveAllowance.total_days - reductionAmount });
+    
+          return res.status(200).json({ message: AppConstants.ErrorMessages.Submission.SUBMISSIONS_UPDATE_SUCCES });
         }
       } catch (error) {
-        console.error(AppConstants.ErrorMessages.Submission.ERROR_FETCHING_SUBMISSIONS, error);
-        res.status(500).json({ error: AppConstants.ErrorMessages.Submission.UNABLE_FETCH_SUBMISSIONS });
+        console.error(AppConstants.ErrorMessages.Other.ERROR_DETAIL, error);
+        return res.status(500).json({ error: AppConstants.ErrorMessages.Other.INTERNAL_SERVER_ERROR });
       }
     },
+    
 
     rejectSubmission: async (req: Request, res: Response) => {
       try {
@@ -752,8 +779,8 @@ const leaveSubmissionController = {
 
         }
       } catch (error) {
-        console.error(AppConstants.ErrorMessages.Submission.ERROR_FETCHING_SUBMISSIONS, error);
-        res.status(500).json({ error: AppConstants.ErrorMessages.Submission.UNABLE_FETCH_SUBMISSIONS });
+        console.error(AppConstants.ErrorMessages.Other.ERROR_DETAIL, error);
+        res.status(500).json({ error: AppConstants.ErrorMessages.Other.INTERNAL_SERVER_ERROR });
       }
     },
 
@@ -782,8 +809,8 @@ const leaveSubmissionController = {
           res.status(200).json({ message: AppConstants.ErrorMessages.Submission.SUBMISSION_DELETE_SUCCES });
         }
       } catch (error) {
-        console.error(AppConstants.ErrorMessages.Submission.ERROR_FETCHING_SUBMISSIONS, error);
-        res.status(500).json({ error: AppConstants.ErrorMessages.Submission.UNABLE_FETCH_SUBMISSIONS });
+        console.error(AppConstants.ErrorMessages.Other.ERROR_DETAIL, error);
+        res.status(500).json({ error: AppConstants.ErrorMessages.Other.INTERNAL_SERVER_ERROR });
       }
     },
 
@@ -797,8 +824,8 @@ const leaveSubmissionController = {
     
         return res.status(200).json({ filename: req.file.filename });
       } catch (error) {
-        console.error(error);
-        return res.status(500).json({ error: AppConstants.ErrorMessages.Attachment.FAILED_TO_UPLOAD });
+        console.error(AppConstants.ErrorMessages.Other.ERROR_DETAIL, error);
+        res.status(500).json({ error: AppConstants.ErrorMessages.Other.INTERNAL_SERVER_ERROR });
       }
     },
 
@@ -843,8 +870,8 @@ const leaveSubmissionController = {
                 return res.status(400).json({ error: AppConstants.ErrorMessages.Attachment.NO_FILE});
             }
         } catch (error) {
-            console.error(AppConstants.ErrorMessages.Attachment.UPDATE_ERROR, error);
-            return res.status(500).json({ error: AppConstants.ErrorMessages.Attachment.FAILED_TO_UPLOAD });
+          console.error(AppConstants.ErrorMessages.Other.ERROR_DETAIL, error);
+          res.status(500).json({ error: AppConstants.ErrorMessages.Other.INTERNAL_SERVER_ERROR });
         }
     },
 
@@ -865,8 +892,8 @@ const leaveSubmissionController = {
               }
             });
         } catch (error) {
-            console.error(AppConstants.ErrorMessages.Attachment.ERROR_FETCH, error);
-            res.status(500).json({ error: AppConstants.ErrorMessages.Attachment.UNABLE_FETCH });
+          console.error(AppConstants.ErrorMessages.Other.ERROR_DETAIL, error);
+          res.status(500).json({ error: AppConstants.ErrorMessages.Other.INTERNAL_SERVER_ERROR });
         }
     },
 
@@ -975,8 +1002,8 @@ const leaveSubmissionController = {
           }
 
       } catch (error) {
-        console.error(AppConstants.ErrorMessages.Submission.ERROR_FETCHING_SUBMISSIONS, error);
-        res.status(500).json({ error: AppConstants.ErrorMessages.Submission.UNABLE_FETCH_SUBMISSIONS });
+        console.error(AppConstants.ErrorMessages.Other.ERROR_DETAIL, error);
+        res.status(500).json({ error: AppConstants.ErrorMessages.Other.INTERNAL_SERVER_ERROR });
       }
     },
 
@@ -1093,8 +1120,8 @@ const leaveSubmissionController = {
           });
         }
       } catch (error) {
-        console.error(AppConstants.ErrorMessages.Submission.ERROR_FETCHING_SUBMISSIONS, error);
-        res.status(500).json({ error: AppConstants.ErrorMessages.Submission.UNABLE_FETCH_SUBMISSIONS });
+        console.error(AppConstants.ErrorMessages.Other.ERROR_DETAIL, error);
+        res.status(500).json({ error: AppConstants.ErrorMessages.Other.INTERNAL_SERVER_ERROR });
       }
     },
 
@@ -1195,8 +1222,8 @@ const leaveSubmissionController = {
           });
         }
       } catch (error) {
-        console.error(AppConstants.ErrorMessages.Submission.ERROR_FETCHING_SUBMISSIONS, error);
-        res.status(500).json({ error: AppConstants.ErrorMessages.Submission.UNABLE_FETCH_SUBMISSIONS });
+        console.error(AppConstants.ErrorMessages.Other.ERROR_DETAIL, error);
+        res.status(500).json({ error: AppConstants.ErrorMessages.Other.INTERNAL_SERVER_ERROR });
       }
     },
 
@@ -1297,8 +1324,8 @@ const leaveSubmissionController = {
           });
         } 
       } catch (error) {
-        console.error(AppConstants.ErrorMessages.Submission.ERROR_FETCHING_SUBMISSIONS, error);
-        res.status(500).json({ error: AppConstants.ErrorMessages.Submission.UNABLE_FETCH_SUBMISSIONS });
+        console.error(AppConstants.ErrorMessages.Other.ERROR_DETAIL, error);
+        res.status(500).json({ error: AppConstants.ErrorMessages.Other.INTERNAL_SERVER_ERROR });
       }
     },
 
@@ -1428,8 +1455,8 @@ const leaveSubmissionController = {
           stats: formattedStats,
         });
       } catch (error) {
-        console.error(AppConstants.ErrorMessages.Submission.ERROR_FETCHING_SUBMISSIONS, error);
-        res.status(500).json({ error: AppConstants.ErrorMessages.Submission.UNABLE_FETCH_SUBMISSIONS });
+        console.error(AppConstants.ErrorMessages.Other.ERROR_DETAIL, error);
+        res.status(500).json({ error: AppConstants.ErrorMessages.Other.INTERNAL_SERVER_ERROR });
       }
     },
 
@@ -1558,8 +1585,8 @@ const leaveSubmissionController = {
         res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
         res.send(buffer);
       } catch (error) {
-        console.error(AppConstants.ErrorMessages.Submission.ERROR_FETCHING_SUBMISSIONS, error);
-        res.status(500).json({ error: AppConstants.ErrorMessages.Submission.UNABLE_FETCH_SUBMISSIONS });
+        console.error(AppConstants.ErrorMessages.Other.ERROR_DETAIL, error);
+        res.status(500).json({ error: AppConstants.ErrorMessages.Other.INTERNAL_SERVER_ERROR });
       }
     }
 

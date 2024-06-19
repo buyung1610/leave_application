@@ -8,11 +8,8 @@ const job = new cron.CronJob('0 0 1 1 *', async () => {
     try {
         const usersWithLeaveAllowance = await User.findAll({
             where: {
-                role: {
-                    [Op.ne]: 'owner'
-                },
                 is_deleted: 0
-              },
+            },
             include: [
                 {
                   model: LeaveAllowance,
@@ -23,27 +20,29 @@ const job = new cron.CronJob('0 0 1 1 *', async () => {
         });
 
         for (const user of usersWithLeaveAllowance) {
-            const joinDate = new Date(user.join_date); 
-            const currentDate = new Date(); 
-
-            const diffYears = currentDate.getFullYear() - joinDate.getFullYear();
-            const diffMonths = diffYears * 12 + (currentDate.getMonth() - joinDate.getMonth());
-
             let leaveAllowance = 0;
-            if (diffMonths >= 72) {
-                leaveAllowance = 17;
-            } else if (diffMonths >= 60) {
-                leaveAllowance = 16;
-            } else if (diffMonths >= 48) {
-                leaveAllowance = 15;
-            } else if (diffMonths >= 36) {
-                leaveAllowance = 14;
-            } else if (diffMonths >= 24) {
-                leaveAllowance = 13;
-            } else if (diffMonths >= 12) {
-                leaveAllowance = 12;
+
+            if (user.role === 'owner') {
+                leaveAllowance = 365;
             } else {
-                leaveAllowance = 0;
+                const joinDate = new Date(user.join_date); 
+                const currentDate = new Date(); 
+                const diffYears = currentDate.getFullYear() - joinDate.getFullYear();
+                const diffMonths = diffYears * 12 + (currentDate.getMonth() - joinDate.getMonth());
+
+                if (diffMonths >= 72) {
+                    leaveAllowance = 17;
+                } else if (diffMonths >= 60) {
+                    leaveAllowance = 16;
+                } else if (diffMonths >= 48) {
+                    leaveAllowance = 15;
+                } else if (diffMonths >= 36) {
+                    leaveAllowance = 14;
+                } else if (diffMonths >= 24) {
+                    leaveAllowance = 13;
+                } else if (diffMonths >= 12) {
+                    leaveAllowance = 12;
+                }
             }
 
             // console.log(`User ${user.id} - Leave Allowance: ${leaveAllowance}`);
