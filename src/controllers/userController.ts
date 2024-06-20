@@ -10,7 +10,7 @@ import { format } from "date-fns";
 const userController = {
   getAllUser: async (req: Request, res: Response) => {
     try {
-      const { page, limit, search } = req.query;
+      const { page, limit, search, filter_by } = req.query;
       const sort_by = req.query.sort_by as string || 'asc';
       const sort_field = req.query.sort_field as string || "id";
   
@@ -42,7 +42,13 @@ const userController = {
       const whereCondition: any = { is_deleted: 0 };
   
       if (search && typeof search === 'string') {
-        whereCondition.name = { [Op.startsWith]: search };
+        if (filter_by === 'name') {
+            whereCondition.name = { [Op.startsWith]: search };
+        } else if (filter_by === 'email') {
+            whereCondition.email = { [Op.startsWith]: search };
+        } else if (filter_by === 'telephone') {
+            whereCondition.telephone = { [Op.startsWith]: search };
+        }
       }
   
       const users = await User.findAndCountAll({

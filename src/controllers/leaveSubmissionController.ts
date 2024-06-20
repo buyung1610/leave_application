@@ -681,11 +681,11 @@ const leaveSubmissionController = {
         }
     
         if (submission.status === AppConstants.Status.DITERIMA) {
-          return res.status(200).json({ error: AppConstants.ErrorMessages.Submission.SUBMISSION_ALREADY_ACCEPTED });
+          return res.status(409).json({ error: AppConstants.ErrorMessages.Submission.SUBMISSION_ALREADY_ACCEPTED });
         }
     
         if (submission.status === AppConstants.Status.DITOLAK) {
-          return res.status(200).json({ error: AppConstants.ErrorMessages.Submission.SUBMISSION_ALREADY_REJECTED });
+          return res.status(409).json({ error: AppConstants.ErrorMessages.Submission.SUBMISSION_ALREADY_REJECTED });
         }
     
         if (submission.status === AppConstants.Status.PENDING) {
@@ -761,9 +761,9 @@ const leaveSubmissionController = {
         if (!submission) {
           return res.status(404).json({ error: AppConstants.ErrorMessages.Submission.SUBMISSION_NOT_FOUND });
         } else if (submission.status === AppConstants.Status.DITERIMA) {
-          return res.status(200).json({ error: AppConstants.ErrorMessages.Submission.SUBMISSION_ALREADY_ACCEPTED });
+          return res.status(409).json({ error: AppConstants.ErrorMessages.Submission.SUBMISSION_ALREADY_ACCEPTED });
         } else if (submission.status === AppConstants.Status.DITOLAK) {
-          return res.status(200).json({ error: AppConstants.ErrorMessages.Submission.SUBMISSION_ALREADY_REJECTED });
+          return res.status(409).json({ error: AppConstants.ErrorMessages.Submission.SUBMISSION_ALREADY_REJECTED });
         } else if (submission.status === AppConstants.Status.PENDING) {
 
           const [updateSubmission] = await LeaveSubmission.update({
@@ -801,7 +801,7 @@ const leaveSubmissionController = {
           deleted_at: new Date(),
           deleted_by: userIdLogin,
           is_deleted: 1
-        }, { where: { id: submissionId } });
+        }, { where: { id: submissionId, is_deleted: 0 } });
     
         if (softDeletedRowsCount[0] === 0) {
           res.status(404).json({ error:AppConstants.ErrorMessages.Submission.SUBMISSION_NOT_FOUND });

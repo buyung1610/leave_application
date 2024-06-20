@@ -2,9 +2,6 @@ import express, { Router } from "express";
 import authController from "../controllers/authController";
 import { verifyToken } from "../middleware/verifyToken";
 import { body } from 'express-validator';
-// import { requestPasswordReset, resetPassword } from '../controllers/authController';
-
-
 const router = express.Router();
 
 
