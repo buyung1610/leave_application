@@ -1,20 +1,13 @@
 import { Request, Response } from "express";
-import LeaveType from "../db/models/leaveTypeModel";
+import Position from "../db/models/positionModel";
 import jwt from "jsonwebtoken";
 import { Op } from "sequelize";
 import AppConstants from "../AppConstants";
 
-const leaveTypeController = {
-    getAll: async (req: Request, res: Response) => {
+const roleController = {
+    getAllPosition: async (req: Request, res: Response) => {
       try {
-        let whereClause: any = { is_deleted: 0 }; 
-        
-        if (req.query.is_emergency !== undefined) {
-          const is_emergency = req.query.is_emergency as string;
-          whereClause.is_emergency = is_emergency; 
-        }
-    
-        const types = await LeaveType.findAll({ where: whereClause });
+        const types = await Position.findAll({ where: { is_deleted: 0 } });
         res.status(200).json(types);
       } catch (error) {
         console.error(AppConstants.ErrorMessages.Other.ERROR_DETAIL, error);
@@ -22,9 +15,9 @@ const leaveTypeController = {
       }
     },
 
-    createLeaveType: async (req: Request, res: Response) => {
+    addPosition: async (req: Request, res: Response) => {
         try{
-          const { type, is_emergency } = req.body
+          const { name, department_id } = req.body
           const token = req.headers.authorization?.split(' ')[1];
 
           if (!token) {
@@ -34,11 +27,12 @@ const leaveTypeController = {
           const decoded = jwt.verify(token, 'your_secret_key') as { userId: number };
           const user_id = decoded.userId;
 
-          const leaveType = await LeaveType.create({
-            type,
-            is_emergency, 
+          const leaveType = await Position.create({
+            name,
+            department_id,
             created_at: new Date(),
-            created_by: user_id
+            created_by: user_id,
+            is_deleted: 0
           })
 
           res.status(201).json({ message: AppConstants.ErrorMessages.LeaveType.CREATE_SUCCES });
@@ -48,10 +42,10 @@ const leaveTypeController = {
         }
     },
 
-    updateLeaveType: async (req: Request, res: Response) => {
+    updatePosition: async (req: Request, res: Response) => {
       try {
-        const leaveTypeId = req.params.id
-        const { type, is_emergency } = req.body
+        const positionId = req.params.id
+        const { name } = req.body
         const token = req.headers.authorization?.split(' ')[1];
 
         if (!token) {
@@ -62,12 +56,11 @@ const leaveTypeController = {
         const user_id = decoded.userId;
   
         // Lakukan update data pengguna
-        const [updatedRowsCount] = await LeaveType.update({ 
-          type, 
-          is_emergency, 
+        const [updatedRowsCount] = await Position.update({ 
+          name,
           updated_at: new Date(),
           updated_by: user_id
-        }, { where: { id: leaveTypeId } });
+        }, { where: { id: positionId } });
   
         if (updatedRowsCount === 0) {
           res.status(404).json({ error: AppConstants.ErrorMessages.LeaveType.NOT_FOUND });
@@ -80,12 +73,12 @@ const leaveTypeController = {
       }
     },
 
-    deleteLeavetype: async (req: Request, res: Response) => {
+    deletePosition: async (req: Request, res: Response) => {
       try {
-        const leaveTypeId = req.params.id;
+        const positionId = req.params.id;
   
         // Hapus pengguna
-        const deletedRowsCount = await LeaveType.destroy({ where: { id: leaveTypeId } });
+        const deletedRowsCount = await Position.destroy({ where: { id: positionId } });
   
         if (deletedRowsCount === 0) {
           res.status(404).json({ error: AppConstants.ErrorMessages.LeaveType.NOT_FOUND
@@ -101,4 +94,4 @@ const leaveTypeController = {
     
 }
 
-export default leaveTypeController
+export default roleController

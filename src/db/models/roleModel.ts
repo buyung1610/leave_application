@@ -1,11 +1,9 @@
 import { DataTypes, Model } from 'sequelize';
 import sequelize from '../../config/dbConnection';
 
-interface LeaveTypeAttributes {
+interface RoleAttributes {
   id?: number;
-  type: string;
-  is_emergency: number;
-  max_days: number | null;
+  name: string;
   created_at: Date | null;
   updated_at: Date | null;
   deleted_at: Date | null;
@@ -15,11 +13,9 @@ interface LeaveTypeAttributes {
   is_deleted?: number;
 }
 
-class LeaveType extends Model<LeaveTypeAttributes> implements LeaveTypeAttributes {
+class Role extends Model<RoleAttributes> implements RoleAttributes {
   public id!: number;
-  public type!: string;
-  public is_emergency!: number;
-  public max_days!: number | null;
+  public name!: string;
   public created_at!: Date | null;
   public updated_at!: Date | null;
   public deleted_at!: Date | null;
@@ -27,9 +23,10 @@ class LeaveType extends Model<LeaveTypeAttributes> implements LeaveTypeAttribute
   public updated_by!: number | null;
   public deleted_by!: number | null;
   public is_deleted!: number;
+  static total_days: any;
 }
 
-LeaveType.init(
+Role.init(
   {
     id: {
       type: DataTypes.INTEGER,
@@ -37,18 +34,10 @@ LeaveType.init(
       primaryKey: true,
       autoIncrement: true,
     },
-    type: {
-      type: DataTypes.STRING,
-      allowNull: false,
-    },
-    is_emergency: {
-      type: DataTypes.TINYINT,
-      allowNull: false,
-    },
-    max_days: {
-      type: DataTypes.INTEGER,
-      allowNull: true,
-    },
+    name: {
+        type: DataTypes.STRING,
+        allowNull: false,
+      },
     created_at: {
       type: DataTypes.DATE,
       allowNull: true,
@@ -96,10 +85,10 @@ LeaveType.init(
   },
   {
     sequelize,
-    modelName: 'LeaveType',
-    tableName: 'leave_types',
+    modelName: 'Role',
+    tableName: 'role',
     timestamps: false,
   }
 );
 
-export default LeaveType;
+export default Role;

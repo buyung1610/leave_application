@@ -430,7 +430,7 @@ const leaveSubmissionController = {
         }
     
         if (leaveType?.is_emergency === 1) {
-          const leaveTypeTotalDays = leaveType.total_days ?? 0;
+          const leaveTypeTotalDays = leaveType.max_days ?? 0;
           const extraDay = numberOfDays - leaveTypeTotalDays;
           if (leaveAllowance.total_days < extraDay) {
             if (!force_submit) {
@@ -531,7 +531,7 @@ const leaveSubmissionController = {
         }
     
         if (leaveType?.is_emergency === 1) {
-          const leaveTypeTotalDays = leaveType.total_days ?? 0;
+          const leaveTypeTotalDays = leaveType.max_days ?? 0;
           const extraDay = numberOfDays - leaveTypeTotalDays;
           if (leaveAllowance.total_days < extraDay) {
             if (!force_submit) {
@@ -625,7 +625,7 @@ const leaveSubmissionController = {
         } 
 
         if (leaveType?.is_emergency === 1) {
-          const leaveTypeTotalDays = leaveType.total_days ?? 0;
+          const leaveTypeTotalDays = leaveType.max_days ?? 0;
           const extraDay = numberOfDays - leaveTypeTotalDays;
           if (leaveAllowance.total_days < extraDay) {
             if (!force_submit) {

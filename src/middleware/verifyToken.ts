@@ -19,7 +19,6 @@ export const verifyToken = async (req: Request, res: Response, next: NextFunctio
               return res.status(401).json({ error: 'Invalid token' });
           }
 
-          // Lanjutkan permintaan ke middleware atau rute berikutnya
           next();
       });
   } catch (error) {

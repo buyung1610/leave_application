@@ -6,6 +6,10 @@ import userRoutes from './routes/userRoutes';
 import submissionRoutes from './routes/leaveSubmissionsRoutes';
 import authRoutes from './routes/authRoutes';
 import leaveType from './routes/leaveTypeRoutes'
+import department from './routes/departmentRoutes'
+import role from './routes/roleRoutes'
+import position from './routes/positionRoutes'
+
 import './jobs/updateLeaveAllowance';
 import User from './db/models/userModel';
 import dotenv from 'dotenv'
@@ -23,6 +27,9 @@ app.use('/auth', authRoutes)
 app.use('/users', userRoutes);
 app.use('/submissions', submissionRoutes)
 app.use('/leave-types', leaveType)
+app.use('/department', department)
+app.use('/role', role)
+app.use('/position', position)
 
 
 const ip = process.env.IP || '0,0,0,0';

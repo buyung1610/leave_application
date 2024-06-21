@@ -1,11 +1,10 @@
 import { DataTypes, Model } from 'sequelize';
 import sequelize from '../../config/dbConnection';
 
-interface LeaveTypeAttributes {
+interface PositionAttributes {
   id?: number;
-  type: string;
-  is_emergency: number;
-  max_days: number | null;
+  name: string;
+  department_id: number;
   created_at: Date | null;
   updated_at: Date | null;
   deleted_at: Date | null;
@@ -15,11 +14,10 @@ interface LeaveTypeAttributes {
   is_deleted?: number;
 }
 
-class LeaveType extends Model<LeaveTypeAttributes> implements LeaveTypeAttributes {
+class Position extends Model<PositionAttributes> implements PositionAttributes {
   public id!: number;
-  public type!: string;
-  public is_emergency!: number;
-  public max_days!: number | null;
+  public name!: string;
+  public department_id!: number;
   public created_at!: Date | null;
   public updated_at!: Date | null;
   public deleted_at!: Date | null;
@@ -27,9 +25,10 @@ class LeaveType extends Model<LeaveTypeAttributes> implements LeaveTypeAttribute
   public updated_by!: number | null;
   public deleted_by!: number | null;
   public is_deleted!: number;
+  static total_days: any;
 }
 
-LeaveType.init(
+Position.init(
   {
     id: {
       type: DataTypes.INTEGER,
@@ -37,17 +36,17 @@ LeaveType.init(
       primaryKey: true,
       autoIncrement: true,
     },
-    type: {
+    name: {
       type: DataTypes.STRING,
       allowNull: false,
     },
-    is_emergency: {
-      type: DataTypes.TINYINT,
-      allowNull: false,
-    },
-    max_days: {
+    department_id: {
       type: DataTypes.INTEGER,
-      allowNull: true,
+      allowNull: false,
+      references: {
+        model: 'department',
+        key: 'id',
+      },
     },
     created_at: {
       type: DataTypes.DATE,
@@ -96,10 +95,10 @@ LeaveType.init(
   },
   {
     sequelize,
-    modelName: 'LeaveType',
-    tableName: 'leave_types',
+    modelName: 'Position',
+    tableName: 'position',
     timestamps: false,
   }
 );
 
-export default LeaveType;
+export default Position;
