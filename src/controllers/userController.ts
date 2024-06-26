@@ -6,6 +6,7 @@ import LeaveAllowance from "../db/models/leaveAllowanceModel";
 import { validationResult } from "express-validator";
 import { Op, OrderItem, Sequelize } from "sequelize";
 import { format } from "date-fns";
+import AppConstants from "../AppConstants";
 
 const userController = {
   getAllUser: async (req: Request, res: Response) => {
@@ -19,13 +20,12 @@ const userController = {
       const parsedPage = parseInt(page as string) || 1;
       const parsedLimit = parseInt(limit as string) || user.count;
   
-      // Validasi sort_by dan sort_field
       const validSortBy = ['asc', 'desc'];
       const isValidSortBy = validSortBy.includes(sort_by as string);
       const isValidSortField = typeof sort_field === 'string' && sort_field !== '';
   
       if (!isValidSortBy || !isValidSortField) {
-        return res.status(400).json({ error: 'Invalid sort_by or sort_field' });
+        return res.status(400).json({ error: AppConstants.ErrorMessages.Other.INVALID_SORT });
       }
   
       const offset = (parsedPage - 1) * parsedLimit;
@@ -42,11 +42,11 @@ const userController = {
       const whereCondition: any = { is_deleted: 0 };
   
       if (search && typeof search === 'string') {
-        if (filter_by === 'name') {
+        if (filter_by === AppConstants.Column.NAME) {
             whereCondition.name = { [Op.startsWith]: search };
-        } else if (filter_by === 'email') {
+        } else if (filter_by === AppConstants.Column.EMAIL) {
             whereCondition.email = { [Op.startsWith]: search };
-        } else if (filter_by === 'telephone') {
+        } else if (filter_by === AppConstants.Column.TELEPHONE) {
             whereCondition.telephone = { [Op.startsWith]: search };
         }
       }
@@ -89,8 +89,8 @@ const userController = {
         totalPages: totalPages
       });
     } catch (error) {
-      console.error('Error while fetching users:', error);
-      res.status(500).json({ error: 'Unable to fetch users' });
+      console.error(AppConstants.ErrorMessages.Other.ERROR_DETAIL, error);
+      res.status(500).json({ error: AppConstants.ErrorMessages.Other.INTERNAL_SERVER_ERROR });
     }
   },
   
@@ -100,7 +100,7 @@ const userController = {
       const token = req.headers.authorization?.split(' ')[1];
 
       if (!token) {
-        return res.status(401).json({ error: 'No token provided' });
+        return res.status(401).json({ error: AppConstants.ErrorMessages.Other.NO_TOKEN });
       }
 
       const decoded = jwt.verify(token, 'your_secret_key') as { userId: number };
@@ -112,16 +112,13 @@ const userController = {
            return
       }
 
-      // Mengecek apakah email sudah ada di dalam database
       const existingUser = await User.findOne({ where: { email: email } });
       if (existingUser) {
-        return res.status(400).json({ error: 'Email already exists' });
+        return res.status(400).json({ error: AppConstants.ErrorMessages.Auth.EMAIL_ALREADY_EXISTS });
       }
   
-      // Hash password menggunakan bcrypt
       const hashedPassword = await bcrypt.hash('1234', 10);
   
-      // Membuat pengguna baru dengan password yang di-hash
       const newUser = await User.create({
         name,
         email,
@@ -164,19 +161,19 @@ const userController = {
       } else {
         leaveAllowance = leave_allowance
       }
-      // Membuat data jatah cuti untuk pengguna baru
+
       const newLeaveAllowance = await LeaveAllowance.create({
-        user_id: newUser.id, // Menggunakan ID pengguna yang baru dibuat
+        user_id: newUser.id, 
         total_days: leaveAllowance,
         created_at: new Date(),
         created_by: user_id,
         is_deleted: 0
       });
   
-      res.status(201).json({ message: 'User created successfully', user: newUser });
+      res.status(201).json({ message: AppConstants.ErrorMessages.User.USER_CREATE_SUCCES, user: newUser });
     } catch (error) {
-      console.error('Error creating user:', error);
-      res.status(500).json({ error: 'Internal server error' });
+      console.error(AppConstants.ErrorMessages.Other.ERROR_DETAIL, error);
+      res.status(500).json({ error: AppConstants.ErrorMessages.Other.INTERNAL_SERVER_ERROR });
     }
   },
 
@@ -184,38 +181,32 @@ const userController = {
     try {
       const userId = req.params.id;
   
-      // Retrieve user data by ID, including associated LeaveAllowance
       const user: any = await User.findByPk(userId, {
         include: {
           model: LeaveAllowance,
           as: 'leaveAllowance',
           attributes: ['total_days']
         },
-        raw: true // Get raw data for flat structure
+        raw: true 
       });
   
-      // If user not found
       if (!user || user.is_deleted === 1) {
-        return res.status(404).json({ error: 'User not found' });
+        return res.status(404).json({ error: AppConstants.ErrorMessages.User.USER_NOT_FOUND });
       }
   
-      // Extract total_days from leaveAllowance (if available)
       const total_days = user['leaveAllowance.total_days'];
   
-      // Remove leaveAllowance from user object
       const { 'leaveAllowance.total_days': totalDays, ...userWithoutLeaveance } = user;
   
-      // Construct the response object
       const response = {
-        ...userWithoutLeaveance, // Include all user properties except leaveAllowance
-        total_days // Include total_days directly
+        ...userWithoutLeaveance, 
+        total_days 
       };
   
-      // Send the response
       res.status(200).json(response);
     } catch (error) {
-      console.error('Error while fetching user by id:', error);
-      res.status(500).json({ error: 'Unable to fetch user' });
+      console.error(AppConstants.ErrorMessages.Other.ERROR_DETAIL, error);
+      res.status(500).json({ error: AppConstants.ErrorMessages.Other.INTERNAL_SERVER_ERROR });
     }
   },
 
@@ -226,7 +217,7 @@ const userController = {
       const token = req.headers.authorization?.split(' ')[1];
 
       if (!token) {
-        return res.status(401).json({ error: 'No token provided' });
+        return res.status(401).json({ error: AppConstants.ErrorMessages.Other.NO_TOKEN });
       }
 
       const decoded = jwt.verify(token, 'your_secret_key') as { userId: number };
@@ -240,7 +231,7 @@ const userController = {
       const user: any = await User.findByPk(userIdParams)
 
       if (!user || user.is_deleted === 1) {
-        return res.status(404).json({ error: 'User not found' });
+        return res.status(404).json({ error: AppConstants.ErrorMessages.User.USER_NOT_FOUND });
       }
 
       const [updatedRowsCount] = await User.update(
@@ -260,10 +251,9 @@ const userController = {
       );
 
       if (updatedRowsCount === 0) {
-        return res.status(404).json({ error: 'User not found' });
+        return res.status(404).json({ error: AppConstants.ErrorMessages.User.USER_NOT_FOUND });
       }
 
-      // Hitung jatah cuti berdasarkan perbedaan bulan antara join_date dan tanggal saat ini
       const joinDate = new Date(join_date); 
       const userJoinDate = new Date(user.join_date);
       const joinDateYear = joinDate.getFullYear();
@@ -272,8 +262,6 @@ const userController = {
       const currentYear = new Date().getFullYear();
       const diffYears = currentDate.getFullYear() - joinDate.getFullYear();
       const diffMonths = diffYears * 12 + (currentDate.getMonth() - joinDate.getMonth());
-
-      
 
       if (userJoinDateYear !== joinDateYear){
         let leaveAllowance = 0;
@@ -311,17 +299,13 @@ const userController = {
           },
         });
       
-        // Debugging log to check the result of leaveStats
         console.log("Leave Stats: ", leaveStats);
       
         const jumlahHariCuti = leaveStats.length > 0 ? leaveStats[0].get('jumlah_hari_cuti') : 0;
         const jumlahHariCutiInt = jumlahHariCuti ? parseInt(jumlahHariCuti.toString(), 10) : 0;
       
-
-        // Pengurangan leaveAllowance dengan jumlahHariCuti
         const updatedLeaveAllowance = leaveAllowance - jumlahHariCutiInt;
 
-        // Simpan data jatah cuti untuk pengguna yang diperbarui
         const [newLeaveAllowance] = await LeaveAllowance.update({
           total_days: updatedLeaveAllowance,
           total_days_copy: leaveAllowance,
@@ -330,36 +314,14 @@ const userController = {
         },{ where: { user_id: userIdParams } });
 
         if (newLeaveAllowance === 0) {
-          return res.status(404).json({ error: 'leave allowance not found' });
+          return res.status(404).json({ error: AppConstants.ErrorMessages.LeaveAllowance.LEAVE_ALLOWANCE_NOT_FOUND });
         }
       }
 
-      res.status(200).json({ message: 'User data updated successfully' });
+      res.status(200).json({ message: AppConstants.ErrorMessages.User.USER_UPDATE_SUCCES });
     } catch (error) {
-      console.error('Error while updating user data:', error);
-      res.status(500).json({ error: 'Unable to update user data' });
-    }
-  },
-
-  deleteUser: async (req: Request, res: Response) => {
-    try {
-      const userId = req.params.id;
-
-      const deletedLeaveAllowance = await LeaveAllowance.destroy({ where: { user_id: userId} })
-      const deletedUpdate = await User.update({ 
-        updated_by: null,
-        created_by: null
-       }, { where: { id: userId } });
-      const deletedRowsCount = await User.destroy({ where: { id: userId } });
-
-      if (deletedRowsCount === 0) {
-        res.status(404).json({ error: 'User not found' });
-      } else {
-        res.status(200).json({ message: 'User deleted successfully' });
-      }
-    } catch (error) {
-      console.error('Error while deleting user:', error);
-      res.status(500).json({ error: 'Unable to delete user' });
+      console.error(AppConstants.ErrorMessages.Other.ERROR_DETAIL, error);
+      res.status(500).json({ error: AppConstants.ErrorMessages.Other.INTERNAL_SERVER_ERROR });
     }
   },
 
@@ -370,7 +332,7 @@ const userController = {
       const token = req.headers.authorization?.split(' ')[1];
 
       if (!token) {
-        return res.status(401).json({ error: 'No token provided' });
+        return res.status(401).json({ error: AppConstants.ErrorMessages.Other.NO_TOKEN });
       }
 
       const decoded = jwt.verify(token, 'your_secret_key') as { userId: number };
@@ -389,13 +351,13 @@ const userController = {
       }, { where: { id: userId } });
   
       if (softDeletedRowsCount[0] === 0) {
-        res.status(404).json({ error: 'User not found' });
+        res.status(404).json({ error: AppConstants.ErrorMessages.User.USER_NOT_FOUND });
       } else {
-        res.status(200).json({ message: 'User deleted successfully' });
+        res.status(200).json({ message: AppConstants.ErrorMessages.User.USER_DELETE_SUCCES });
       }
     } catch (error) {
-      console.error('Error while deleting user:', error);
-      res.status(500).json({ error: 'Unable to delete user' });
+      console.error(AppConstants.ErrorMessages.Other.ERROR_DETAIL, error);
+      res.status(500).json({ error: AppConstants.ErrorMessages.Other.INTERNAL_SERVER_ERROR });
     }
   },
 
@@ -404,45 +366,40 @@ const userController = {
       const token = req.headers.authorization?.split(' ')[1];
 
       if (!token) {
-          return res.status(401).json({ error: 'No token provided' });
+          return res.status(401).json({ error: AppConstants.ErrorMessages.Other.NO_TOKEN });
       }
 
       const decoded = jwt.verify(token, 'your_secret_key') as { userId: number };
       const user_id = decoded.userId
 
-      // Temukan pengguna berdasarkan ID yang didekodekan dari token
       const user: any = await User.findByPk(user_id, {
         include: {
           model: LeaveAllowance,
           as: 'leaveAllowance',
           attributes: ['total_days']
         },
-        raw: true // Get raw data for flat structure
+        raw: true 
       });
   
-      // If user not found
       if (!user || user.is_deleted === 1) {
-        return res.status(404).json({ error: 'User not found' });
+        return res.status(404).json({ error: AppConstants.ErrorMessages.User.USER_NOT_FOUND });
       }
   
-      // Extract total_days from leaveAllowance (if available)
       const total_days = user['leaveAllowance.total_days'];
   
-      // Remove leaveAllowance from user object
       const { 'leaveAllowance.total_days': totalDays, ...userWithoutLeaveance } = user;
   
-      // Construct the response object
       const response = {
-        ...userWithoutLeaveance, // Include all user properties except leaveAllowance
-        total_days // Include total_days directly
+        ...userWithoutLeaveance, 
+        total_days 
       };
   
       // Send the response
       res.status(200).json(response);
 
     } catch (error) {
-        console.error('Error verifying token:', error);
-        return res.status(401).json({ error: 'Invalid token' });
+      console.error(AppConstants.ErrorMessages.Other.ERROR_DETAIL, error);
+      res.status(500).json({ error: AppConstants.ErrorMessages.Other.INTERNAL_SERVER_ERROR });
     }
   },
 
@@ -452,7 +409,7 @@ const userController = {
       const token = req.headers.authorization?.split(' ')[1];
   
       if (!token) {
-        return res.status(401).json({ error: 'No token provided' });
+        return res.status(401).json({ error: AppConstants.ErrorMessages.Other.NO_TOKEN });
       }
   
       const decoded = jwt.verify(token, 'your_secret_key') as { userId: number };
@@ -466,12 +423,10 @@ const userController = {
 
       const user: any = await User.findByPk(user_id);
   
-      // If user not found
       if (!user || user.is_deleted === 1) {
-        return res.status(404).json({ error: 'User not found' });
+        return res.status(404).json({ error: AppConstants.ErrorMessages.User.USER_NOT_FOUND });
       }
   
-      // Update data pengguna
       const [updatedRowsCount] = await User.update(
         {
           name,
@@ -480,21 +435,17 @@ const userController = {
           updated_at: new Date(),
           updated_by: user_id,
         },
-        { where: { id: user_id } } // Pindahkan where ke opsi update
+        { where: { id: user_id } }
       );
   
       if (updatedRowsCount === 0) {
-        return res.status(404).json({ error: 'User not found' });
+        return res.status(404).json({ error: AppConstants.ErrorMessages.User.USER_NOT_FOUND });
       }
   
-      // Hitung jatah cuti berdasarkan perbedaan bulan antara join_date dan tanggal saat ini
-  
-      // Perbarui data jatah cuti untuk pengguna yang diperbarui
-  
-      res.status(200).json({ message: 'User data updated successfully' });
+      res.status(200).json({ message: AppConstants.ErrorMessages.User.USER_UPDATE_SUCCES });
     } catch (error) {
-      console.error('Error while updating user data:', error);
-      res.status(500).json({ error: 'Unable to update user data' });
+      console.error(AppConstants.ErrorMessages.Other.ERROR_DETAIL, error);
+      res.status(500).json({ error: AppConstants.ErrorMessages.Other.INTERNAL_SERVER_ERROR });
     }
   },
 

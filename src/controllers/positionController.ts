@@ -7,8 +7,8 @@ import AppConstants from "../AppConstants";
 const roleController = {
     getAllPosition: async (req: Request, res: Response) => {
       try {
-        const types = await Position.findAll({ where: { is_deleted: 0 } });
-        res.status(200).json(types);
+        const position = await Position.findAll({ where: { is_deleted: 0 } });
+        res.status(200).json(position);
       } catch (error) {
         console.error(AppConstants.ErrorMessages.Other.ERROR_DETAIL, error);
         res.status(500).json({ error: AppConstants.ErrorMessages.Other.INTERNAL_SERVER_ERROR });
@@ -27,7 +27,7 @@ const roleController = {
           const decoded = jwt.verify(token, 'your_secret_key') as { userId: number };
           const user_id = decoded.userId;
 
-          const leaveType = await Position.create({
+          const position = await Position.create({
             name,
             department_id,
             created_at: new Date(),
@@ -35,7 +35,7 @@ const roleController = {
             is_deleted: 0
           })
 
-          res.status(201).json({ message: AppConstants.ErrorMessages.LeaveType.CREATE_SUCCES });
+          res.status(201).json({ message: AppConstants.ErrorMessages.Position.CREATE_SUCCES });
         } catch (error) {
           console.error(AppConstants.ErrorMessages.Other.ERROR_DETAIL, error);
           res.status(500).json({ error: AppConstants.ErrorMessages.Other.INTERNAL_SERVER_ERROR });
@@ -63,9 +63,9 @@ const roleController = {
         }, { where: { id: positionId } });
   
         if (updatedRowsCount === 0) {
-          res.status(404).json({ error: AppConstants.ErrorMessages.LeaveType.NOT_FOUND });
+          res.status(404).json({ error: AppConstants.ErrorMessages.Position.NOT_FOUND });
         } else {
-          res.status(200).json({ message: AppConstants.ErrorMessages.LeaveType.UPDATE_SUCCES });
+          res.status(200).json({ message: AppConstants.ErrorMessages.Position.UPDATE_SUCCES });
         }
       } catch (error) {
         console.error(AppConstants.ErrorMessages.Other.ERROR_DETAIL, error);
@@ -77,14 +77,13 @@ const roleController = {
       try {
         const positionId = req.params.id;
   
-        // Hapus pengguna
         const deletedRowsCount = await Position.destroy({ where: { id: positionId } });
   
         if (deletedRowsCount === 0) {
-          res.status(404).json({ error: AppConstants.ErrorMessages.LeaveType.NOT_FOUND
+          res.status(404).json({ error: AppConstants.ErrorMessages.Position.NOT_FOUND
            });
         } else {
-          res.status(200).json({ message: AppConstants.ErrorMessages.LeaveType.DELETE_SUCCES });
+          res.status(200).json({ message: AppConstants.ErrorMessages.Position.DELETE_SUCCES });
         }
       } catch (error) {
         console.error(AppConstants.ErrorMessages.Other.ERROR_DETAIL, error);

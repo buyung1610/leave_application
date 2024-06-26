@@ -7,8 +7,8 @@ import AppConstants from "../AppConstants";
 const departmentController = {
     getAll: async (req: Request, res: Response) => {
       try {
-        const types = await Department.findAll({ where: { is_deleted: 0 } });
-        res.status(200).json(types);
+        const department = await Department.findAll({ where: { is_deleted: 0 } });
+        res.status(200).json(department);
       } catch (error) {
         console.error(AppConstants.ErrorMessages.Other.ERROR_DETAIL, error);
         res.status(500).json({ error: AppConstants.ErrorMessages.Other.INTERNAL_SERVER_ERROR });
@@ -27,14 +27,14 @@ const departmentController = {
           const decoded = jwt.verify(token, 'your_secret_key') as { userId: number };
           const user_id = decoded.userId;
 
-          const leaveType = await Department.create({
+          const department = await Department.create({
             name,
             created_at: new Date(),
             created_by: user_id,
             is_deleted: 0
           })
 
-          res.status(201).json({ message: AppConstants.ErrorMessages.LeaveType.CREATE_SUCCES });
+          res.status(201).json({ message: AppConstants.ErrorMessages.Department.CREATE_SUCCES });
         } catch (error) {
           console.error(AppConstants.ErrorMessages.Other.ERROR_DETAIL, error);
           res.status(500).json({ error: AppConstants.ErrorMessages.Other.INTERNAL_SERVER_ERROR });
@@ -62,9 +62,9 @@ const departmentController = {
         }, { where: { id: departmentId } });
   
         if (updatedRowsCount === 0) {
-          res.status(404).json({ error: AppConstants.ErrorMessages.LeaveType.NOT_FOUND });
+          res.status(404).json({ error: AppConstants.ErrorMessages.Department.NOT_FOUND });
         } else {
-          res.status(200).json({ message: AppConstants.ErrorMessages.LeaveType.UPDATE_SUCCES });
+          res.status(200).json({ message: AppConstants.ErrorMessages.Department.UPDATE_SUCCES });
         }
       } catch (error) {
         console.error(AppConstants.ErrorMessages.Other.ERROR_DETAIL, error);
@@ -76,14 +76,12 @@ const departmentController = {
       try {
         const departmentId = req.params.id;
   
-        // Hapus pengguna
         const deletedRowsCount = await Department.destroy({ where: { id: departmentId } });
   
         if (deletedRowsCount === 0) {
-          res.status(404).json({ error: AppConstants.ErrorMessages.LeaveType.NOT_FOUND
-           });
+          res.status(404).json({ error: AppConstants.ErrorMessages.Department.NOT_FOUND});
         } else {
-          res.status(200).json({ message: AppConstants.ErrorMessages.LeaveType.DELETE_SUCCES });
+          res.status(200).json({ message: AppConstants.ErrorMessages.Department.DELETE_SUCCES });
         }
       } catch (error) {
         console.error(AppConstants.ErrorMessages.Other.ERROR_DETAIL, error);

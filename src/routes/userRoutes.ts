@@ -20,7 +20,8 @@ router.post("/", verifyToken,[
     body('email').notEmpty().withMessage('Email is required'),
     body('position').notEmpty().withMessage('Position is required'),
     body('department').notEmpty().withMessage('Department is required'),
-    body('telephone').notEmpty().withMessage('Telephone is required'),
+    body('telephone').notEmpty().withMessage('Telephone is required')
+        .isLength({ min: 10 }).withMessage('Emergency call must be at least 10 characters long'),
     body('join_date').notEmpty().withMessage('Join date is required'),
     body('gender').notEmpty().withMessage('Gender is required')
 ], userController.createUser)
@@ -31,7 +32,8 @@ router.put("/profil", verifyToken,[
     body('name').notEmpty().withMessage('Name is required'),
     body('email').isEmail().withMessage('Invalid email'),
     body('email').notEmpty().withMessage('Email is required'),
-    body('telephone').notEmpty().withMessage('Telephone is required'),
+    body('telephone').notEmpty().withMessage('Telephone is required')
+        .isLength({ min: 10 }).withMessage('Emergency call must be at least 10 characters long'),
 ], userController.updateProfil)
 
 router.put("/:id", verifyToken,[
@@ -40,7 +42,8 @@ router.put("/:id", verifyToken,[
     body('email').notEmpty().withMessage('Email is required'),
     body('position').notEmpty().withMessage('Position is required'),
     body('department').notEmpty().withMessage('Department is required'),
-    body('telephone').notEmpty().withMessage('Telephone is required'),
+    body('telephone').notEmpty().withMessage('Telephone is required')
+        .isLength({ min: 10 }).withMessage('Emergency call must be at least 10 characters long'),
     body('join_date').notEmpty().withMessage('Join date is required'),
     body('gender').notEmpty().withMessage('Gender is required')
 ], userController.updateUserData)

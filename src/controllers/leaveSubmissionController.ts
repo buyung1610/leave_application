@@ -1566,7 +1566,7 @@ const leaveSubmissionController = {
     
           return {
             "Nama": stat.name,
-            "Total Cuti": stat.get('total_cuti'),
+            "Total Pengajuan Cuti": stat.get('total_cuti'),
             "Cuti Diterima": stat.get('cuti_diterima'),
             "Cuti Ditolak": stat.get('cuti_ditolak'),
             "Cuti Pending": stat.get('cuti_pending'),
