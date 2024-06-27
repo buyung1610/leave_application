@@ -158,7 +158,7 @@ const authController = {
             }
 
             if (!user.resetToken) {
-                res.status(401).json({ error: AppConstants.ErrorMessages.Other.NO_TOKEN });
+                res.status(401).json({ error: AppConstants.ErrorMessages.Auth.TOKEN_INVALID });
                 return
             }
 

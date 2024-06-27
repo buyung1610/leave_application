@@ -84,6 +84,7 @@ const AppConstants = {
             EMAIL_ALREADY_EXISTS: 'Email already exists',
             SEND_PASSWORD_RESET_LINK: 'Password reset link sent to email',
             RESET_TOKEN_INVALID: 'Password reset token is invalid or has expired',
+            TOKEN_INVALID: 'Password reset token is invalid',
             RESET_PASSWORD_SUCCES: 'Password has been reset'
 
         }

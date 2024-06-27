@@ -342,7 +342,7 @@ const userController = {
         deleted_at: new Date(),
         deleted_by: userIdLogin,
         is_deleted: 1
-      }, { where: { id: userId } });
+      }, { where: { user_id: userId } });
   
       const softDeletedRowsCount = await User.update({ 
         deleted_at: new Date(),

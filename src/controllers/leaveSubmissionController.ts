@@ -423,7 +423,7 @@ const leaveSubmissionController = {
         if (leave_type === 1 || leave_type === "1") {
           if (leaveAllowance.total_days === 0 || leaveAllowance.total_days < numberOfDays) {
             if (!force_submit) {
-              return res.status(401).json({ error: AppConstants.ErrorMessages.LeaveAllowance.JATAH_CUTI_TIDAK_CUKUP });
+              return res.status(403).json({ error: AppConstants.ErrorMessages.LeaveAllowance.JATAH_CUTI_TIDAK_CUKUP });
             }
           }
           reductionAmount = numberOfDays;
@@ -434,7 +434,7 @@ const leaveSubmissionController = {
           const extraDay = numberOfDays - leaveTypeTotalDays;
           if (leaveAllowance.total_days < extraDay) {
             if (!force_submit) {
-              return res.status(401).json({ error: AppConstants.ErrorMessages.LeaveAllowance.JATAH_CUTI_TIDAK_CUKUP });
+              return res.status(403).json({ error: AppConstants.ErrorMessages.LeaveAllowance.JATAH_CUTI_TIDAK_CUKUP });
             }
           }
           reductionAmount = extraDay;
@@ -524,7 +524,7 @@ const leaveSubmissionController = {
         if (leave_type === 1 || leave_type === "1") {
           if (leaveAllowance.total_days === 0 || leaveAllowance.total_days < numberOfDays) {
             if (!force_submit) {
-              return res.status(401).json({ error: AppConstants.ErrorMessages.LeaveAllowance.JATAH_CUTI_TIDAK_CUKUP });
+              return res.status(403).json({ error: AppConstants.ErrorMessages.LeaveAllowance.JATAH_CUTI_TIDAK_CUKUP });
             }
           }
           reductionAmount = numberOfDays;
@@ -535,7 +535,7 @@ const leaveSubmissionController = {
           const extraDay = numberOfDays - leaveTypeTotalDays;
           if (leaveAllowance.total_days < extraDay) {
             if (!force_submit) {
-              return res.status(401).json({ error: AppConstants.ErrorMessages.LeaveAllowance.JATAH_CUTI_TIDAK_CUKUP });
+              return res.status(403).json({ error: AppConstants.ErrorMessages.LeaveAllowance.JATAH_CUTI_TIDAK_CUKUP });
             }
           }
           reductionAmount = extraDay;
@@ -618,7 +618,7 @@ const leaveSubmissionController = {
         if (leave_type === 1 || leave_type === "1") {
           if (leaveAllowance.total_days === null || leaveAllowance.total_days === 0 || leaveAllowance.total_days < numberOfDays) {
             if (!force_submit) {
-              return res.status(401).json({ error: AppConstants.ErrorMessages.LeaveAllowance.JATAH_CUTI_TIDAK_CUKUP });
+              return res.status(403).json({ error: AppConstants.ErrorMessages.LeaveAllowance.JATAH_CUTI_TIDAK_CUKUP });
             }
           }
           reductionAmount = numberOfDays
@@ -629,7 +629,7 @@ const leaveSubmissionController = {
           const extraDay = numberOfDays - leaveTypeTotalDays;
           if (leaveAllowance.total_days < extraDay) {
             if (!force_submit) {
-              return res.status(401).json({ error: AppConstants.ErrorMessages.LeaveAllowance.JATAH_CUTI_TIDAK_CUKUP });
+              return res.status(403).json({ error: AppConstants.ErrorMessages.LeaveAllowance.JATAH_CUTI_TIDAK_CUKUP });
             }
           }
           reductionAmount = extraDay
@@ -692,7 +692,7 @@ const leaveSubmissionController = {
           const leaveAllowances = await LeaveAllowance.findOne({ where: { user_id: submission.user_id, is_deleted: 0 } });
     
           if (!leaveAllowances) {
-            return res.status(500).json({ error: AppConstants.ErrorMessages.LeaveAllowance.LEAVE_ALLOWANCE_NOT_FOUND });
+            return res.status(404).json({ error: AppConstants.ErrorMessages.LeaveAllowance.LEAVE_ALLOWANCE_NOT_FOUND });
           }
     
           let reductionAmount;
@@ -726,7 +726,7 @@ const leaveSubmissionController = {
           const leaveAllowance = await LeaveAllowance.findOne({ where: { user_id: userId, is_deleted: 0 } });
     
           if (!leaveAllowance) {
-            return res.status(500).json({ error: AppConstants.ErrorMessages.LeaveAllowance.LEAVE_ALLOWANCE_NOT_FOUND });
+            return res.status(404).json({ error: AppConstants.ErrorMessages.LeaveAllowance.LEAVE_ALLOWANCE_NOT_FOUND });
           }
     
           if (leaveAllowance.total_days === null) {
@@ -901,25 +901,7 @@ const leaveSubmissionController = {
 
     karyawanCuti: async (req: Request, res: Response) => {
       try {
-        const { page, limit } = req.query;
-        const sort_by = req.query.sort_by as string || 'asc';
-        const sort_field = req.query.sort_field as string || 'id';
-
         const submisssionCount = await LeaveSubmission.findAndCountAll({ where: { is_deleted: 0 } });
-    
-        const parsedPage = parseInt(page as string) || 1;
-        const parsedLimit = parseInt(limit as string) || submisssionCount.count;
-    
-        // Validasi sort_by dan sort_field
-        const validSortBy = ['asc', 'desc'];
-        const isValidSortBy = validSortBy.includes(sort_by as string);
-        const isValidSortField = typeof sort_field === 'string' && sort_field !== '';
-    
-        if (!isValidSortBy || !isValidSortField) {
-          return res.status(400).json({ error: AppConstants.ErrorMessages.Other.INVALID_SORT });
-        }
-    
-        const offset = (parsedPage - 1) * parsedLimit;
 
         const today = new Date();
         const formattedToday = format(today, 'yyyy-MM-dd');
@@ -935,28 +917,6 @@ const leaveSubmissionController = {
               [Op.gte]: formattedToday,
             },
           },
-          limit: parsedLimit,
-          offset: offset,
-          order: [[sort_field, sort_by]],
-          include: [
-            {
-              model: User,
-              attributes: ['name', 'position', 'department', 'telephone'],
-            },
-            {
-              model: LeaveType,
-              attributes: ['type'],
-            },
-            {
-              model: LeaveAllowance,
-              attributes: ['total_days'],
-            },
-            {
-              model: User,
-              as: 'Approver',
-              attributes: ['name'],
-            },
-          ],
         };
     
         const submissions = await LeaveSubmission.findAll(options);
@@ -966,38 +926,13 @@ const leaveSubmissionController = {
             
             const { rows, count } = await LeaveSubmission.findAndCountAll(options);
 
-            const submissions = rows.map((submission: any) => {
-              // Mengonversi tanggal ke string ISO 8601 dan mengambil bagian tanggal saja
-              // const formattedDate = submission.created_at ? new Date (submission.created_at).toISOString().slice(0, 10) : null;
-              const formattedDate = submission.created_at ? format(new Date(submission.created_at), 'yyyy-MM-dd') : null;
             
-              return {
-                id: submission.id,
-                name: submission.User ? submission.User.name : null,
-                submissionDate: formattedDate, // Menggunakan tanggal yang sudah diformat
-                telephone: submission.User ? submission.User.telephone : null,
-                emergencyCall: submission.emergency_call,
-                position: submission.User ? submission.User.position : null,
-                department: submission.User ? submission.User.department : null,
-                startDate: submission.start_date,
-                endDate: submission.end_date,
-                totalDays: submission.total_days,
-                leaveType: submission.LeaveType ? submission.LeaveType.type : null,
-                description: submission.description,
-                leaveAllowance: submission.LeaveAllowance ? submission.LeaveAllowance.total_days : null,
-                status: submission.status,
-                approver: submission.Approver ? submission.Approver.name : null,
-                attachment: submission.attachment,
-              };
-            });
             res.status(200).json({
-              count,
-              submissions,
+              count
             });
           } else {
             res.status(200).json({
-              count: 0,
-              submissions: [],
+              count: 0
             });
           }
 
@@ -1009,14 +944,7 @@ const leaveSubmissionController = {
 
     permintaanCuti: async (req: Request, res: Response) => {
       try {
-        const { page, limit } = req.query;
-        const sort_by = req.query.sort_by as string || 'asc';
-        const sort_field = req.query.sort_field as string || 'id';
-    
         const submisssionCount = await LeaveSubmission.findAndCountAll({ where: { is_deleted: 0 } });
-    
-        const parsedPage = parseInt(page as string) || 1;
-        const parsedLimit = parseInt(limit as string) || submisssionCount.count;
         const token = req.headers.authorization?.split(' ')[1];
     
         if (!token) {
@@ -1026,44 +954,12 @@ const leaveSubmissionController = {
         const decoded = jwt.verify(token, 'your_secret_key') as { role: string };
          
         const role = decoded.role;
-    
-        const validSortBy = ['asc', 'desc'];
-        const isValidSortBy = validSortBy.includes(sort_by);
-        const isValidSortField = typeof sort_field === 'string' && sort_field !== '';
-    
-        if (!isValidSortBy || !isValidSortField) {
-          return res.status(400).json({ error: AppConstants.ErrorMessages.Other.INVALID_SORT });
-        }
-    
-        const offset = (parsedPage - 1) * parsedLimit;
-    
+
         const options: FindOptions = {
           where: {
             is_deleted: 0,
             status: AppConstants.Status.PENDING,
           },
-          limit: parsedLimit,
-          offset: offset,
-          order: [[sort_field, sort_by]],
-          include: [
-            {
-              model: User,
-              attributes: ['name', 'position', 'department', 'telephone', 'role'],
-            },
-            {
-              model: LeaveType,
-              attributes: ['type'],
-            },
-            {
-              model: LeaveAllowance,
-              attributes: ['total_days'],
-            },
-            {
-              model: User,
-              as: 'Approver',
-              attributes: ['name'],
-            },
-          ],
         };
 
         if (role === AppConstants.Role.HR) {
@@ -1087,36 +983,12 @@ const leaveSubmissionController = {
         const { rows, count } = await LeaveSubmission.findAndCountAll(options);
     
         if (rows.length > 0) {
-          const submissions = rows.map((submission: any) => {
-            const formattedDate = submission.created_at ? format(new Date(submission.created_at), 'yyyy-MM-dd') : null;
-    
-            return {
-              id: submission.id,
-              name: submission.User ? submission.User.name : null,
-              submissionDate: formattedDate,
-              telephone: submission.User ? submission.User.telephone : null,
-              emergencyCall: submission.emergency_call,
-              position: submission.User ? submission.User.position : null,
-              department: submission.User ? submission.User.department : null,
-              startDate: submission.start_date,
-              endDate: submission.end_date,
-              totalDays: submission.total_days,
-              leaveType: submission.LeaveType ? submission.LeaveType.type : null,
-              description: submission.description,
-              leaveAllowance: submission.LeaveAllowance ? submission.LeaveAllowance.total_days : null,
-              status: submission.status,
-              approver: submission.Approver ? submission.Approver.name : null,
-              attachment: submission.attachment,
-            };
-          });
           res.status(200).json({
-            count,
-            submissions,
+            count
           });
         } else {
           res.status(200).json({
-            count: 0,
-            submissions: [],
+            count: 0
           });
         }
       } catch (error) {
@@ -1127,9 +999,6 @@ const leaveSubmissionController = {
 
     cutiDiterima: async (req: Request, res: Response) => {
       try {
-        const { page, limit } = req.query;
-        const sort_by = req.query.sort_by as string || 'asc';
-        const sort_field = req.query.sort_field as string || 'id';
         const token = req.headers.authorization?.split(' ')[1];
 
         if (!token) {
@@ -1142,83 +1011,23 @@ const leaveSubmissionController = {
     
         const submisssionCount = await LeaveSubmission.findAndCountAll({ where: { is_deleted: 0 } });
     
-        const parsedPage = parseInt(page as string) || 1;
-        const parsedLimit = parseInt(limit as string) || submisssionCount.count;
-    
-        // Validasi sort_by dan sort_field
-        const validSortBy = ['asc', 'desc'];
-        const isValidSortBy = validSortBy.includes(sort_by);
-        const isValidSortField = typeof sort_field === 'string' && sort_field !== '';
-    
-        if (!isValidSortBy || !isValidSortField) {
-          return res.status(400).json({ error: AppConstants.ErrorMessages.Other.INVALID_SORT });
-        }
-    
-        const offset = (parsedPage - 1) * parsedLimit;
-    
         const options: FindOptions = {
           where: {
             is_deleted: 0,
             status: AppConstants.Status.DITERIMA,
             user_id: user_id
           },
-          limit: parsedLimit,
-          offset: offset,
-          order: [[sort_field, sort_by]],
-          include: [
-            {
-              model: User,
-              attributes: ['name', 'position', 'department', 'telephone'],
-            },
-            {
-              model: LeaveType,
-              attributes: ['type'],
-            },
-            {
-              model: LeaveAllowance,
-              attributes: ['total_days'],
-            },
-            {
-              model: User,
-              as: 'Approver',
-              attributes: ['name'],
-            },
-          ],
         };
     
         const { rows, count } = await LeaveSubmission.findAndCountAll(options);
     
         if (rows.length > 0) {
-          const submissions = rows.map((submission: any) => {
-            const formattedDate = submission.created_at ? format(new Date(submission.created_at), 'yyyy-MM-dd') : null;
-    
-            return {
-              id: submission.id,
-              name: submission.User ? submission.User.name : null,
-              submissionDate: formattedDate,
-              telephone: submission.User ? submission.User.telephone : null,
-              emergencyCall: submission.emergency_call,
-              position: submission.User ? submission.User.position : null,
-              department: submission.User ? submission.User.department : null,
-              startDate: submission.start_date,
-              endDate: submission.end_date,
-              totalDays: submission.total_days,
-              leaveType: submission.LeaveType ? submission.LeaveType.type : null,
-              description: submission.description,
-              leaveAllowance: submission.LeaveAllowance ? submission.LeaveAllowance.total_days : null,
-              status: submission.status,
-              approver: submission.Approver ? submission.Approver.name : null,
-              attachment: submission.attachment,
-            };
-          });
           res.status(200).json({
-            count,
-            submissions,
+            count
           });
         } else {
           res.status(200).json({
-            count: 0,
-            submissions: [],
+            count: 0
           });
         }
       } catch (error) {
@@ -1229,9 +1038,6 @@ const leaveSubmissionController = {
 
     cutiDitolak: async (req: Request, res: Response) => { 
       try {
-        const { page, limit } = req.query;
-        const sort_by = req.query.sort_by as string || 'asc';
-        const sort_field = req.query.sort_field as string || 'id';
         const token = req.headers.authorization?.split(' ')[1];
 
         if (!token) {
@@ -1244,83 +1050,23 @@ const leaveSubmissionController = {
     
         const submisssionCount = await LeaveSubmission.findAndCountAll({ where: { is_deleted: 0 } });
     
-        const parsedPage = parseInt(page as string) || 1;
-        const parsedLimit = parseInt(limit as string) || submisssionCount.count;
-    
-        // Validasi sort_by dan sort_field
-        const validSortBy = ['asc', 'desc'];
-        const isValidSortBy = validSortBy.includes(sort_by);
-        const isValidSortField = typeof sort_field === 'string' && sort_field !== '';
-    
-        if (!isValidSortBy || !isValidSortField) {
-          return res.status(400).json({ error: AppConstants.ErrorMessages.Other.INVALID_SORT });
-        }
-    
-        const offset = (parsedPage - 1) * parsedLimit;
-    
         const options: FindOptions = {
           where: {
             is_deleted: 0,
             status: AppConstants.Status.DITOLAK,
             user_id: user_id
           },
-          limit: parsedLimit,
-          offset: offset,
-          order: [[sort_field, sort_by]],
-          include: [
-            {
-              model: User,
-              attributes: ['name', 'position', 'department', 'telephone'],
-            },
-            {
-              model: LeaveType,
-              attributes: ['type'],
-            },
-            {
-              model: LeaveAllowance,
-              attributes: ['total_days'],
-            },
-            {
-              model: User,
-              as: 'Approver',
-              attributes: ['name'],
-            },
-          ],
         };
     
         const { rows, count } = await LeaveSubmission.findAndCountAll(options);
     
         if (rows.length > 0) {
-          const submissions = rows.map((submission: any) => {
-            const formattedDate = submission.created_at ? format(new Date(submission.created_at), 'yyyy-MM-dd') : null;
-    
-            return {
-              id: submission.id,
-              name: submission.User ? submission.User.name : null,
-              submissionDate: formattedDate,
-              telephone: submission.User ? submission.User.telephone : null,
-              emergencyCall: submission.emergency_call,
-              position: submission.User ? submission.User.position : null,
-              department: submission.User ? submission.User.department : null,
-              startDate: submission.start_date,
-              endDate: submission.end_date,
-              totalDays: submission.total_days,
-              leaveType: submission.LeaveType ? submission.LeaveType.type : null,
-              description: submission.description,
-              leaveAllowance: submission.LeaveAllowance ? submission.LeaveAllowance.total_days : null,
-              status: submission.status,
-              approver: submission.Approver ? submission.Approver.name : null,
-              attachment: submission.attachment,
-            };
-          });
           res.status(200).json({
-            count,
-            submissions,
+            count
           });
         } else {
           res.status(200).json({
-            count: 0,
-            submissions: [],
+            count: 0
           });
         } 
       } catch (error) {
