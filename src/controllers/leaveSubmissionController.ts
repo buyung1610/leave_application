@@ -554,7 +554,8 @@ const leaveSubmissionController = {
           created_by: user_id,
           is_deleted: 0,
           attachment: attachment,
-          status: 'Diterima'
+          status: 'Diterima',
+          approver_user_id: user_id
         });
 
         
